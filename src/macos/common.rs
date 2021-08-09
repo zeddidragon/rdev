@@ -72,7 +72,6 @@ extern "C" {
         order: CFIndex,
     ) -> CFRunLoopSourceRef;
     pub fn CFRunLoopAddSource(rl: CFRunLoopRef, source: CFRunLoopSourceRef, mode: CFRunLoopMode);
-    pub fn CFRunLoopGetCurrent() -> CFRunLoopRef;
     pub fn CFRunLoopGetMain() -> CFRunLoopRef;
     pub fn CGEventTapEnable(tap: CFMachPortRef, enable: bool);
     pub fn CFRunLoopRun();
