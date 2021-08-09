@@ -138,7 +138,7 @@ pub unsafe fn convert(
                 let code =
                     cg_event.get_integer_value_field(EventField::KEYBOARD_EVENT_KEYCODE) as u32;
                 let flags = cg_event.get_flags();
-                keyboard_state.create_string_for_key(code, flags)
+                None //keyboard_state.create_string_for_key(code, flags) // disable this, it is buggy and useless for me
             }
             _ => None,
         };

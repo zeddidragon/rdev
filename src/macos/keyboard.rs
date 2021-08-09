@@ -91,8 +91,19 @@ impl Keyboard {
         modifier_state: ModifierState,
     ) -> Option<String> {
         let keyboard = TISCopyCurrentKeyboardInputSource();
+        if keyboard.is_null() {
+            return None;
+        }
         let layout = TISGetInputSourceProperty(keyboard, kTISPropertyUnicodeKeyLayoutData);
+        if layout.is_null() {
+            CFRelease(keyboard);
+            return None;
+        }
         let layout_ptr = CFDataGetBytePtr(layout);
+        if layout_ptr.is_null() {
+            CFRelease(keyboard);
+            return None;
+        }
 
         let mut buff = [0_u16; BUF_LEN];
         let kb_type = LMGetKbdType();
