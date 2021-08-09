@@ -45,7 +45,7 @@ where
             CGEventTapLocation::HID, // HID, Session, AnnotatedSession,
             kCGHeadInsertEventTap,
             CGEventTapOption::ListenOnly,
-            kCGEventMaskForAllEvents,
+            types,
             raw_callback,
             nil,
         );
@@ -57,7 +57,7 @@ where
             return Err(ListenError::LoopSourceError);
         }
 
-        let current_loop = CFRunLoopGetCurrent();
+        let current_loop = CFRunLoopGetMain();
         CFRunLoopAddSource(current_loop, _loop, kCFRunLoopCommonModes);
 
         CGEventTapEnable(tap, true);
