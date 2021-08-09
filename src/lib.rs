@@ -364,6 +364,10 @@ where
     _grab(callback)
 }
 
+pub(crate) fn keyboard_only() -> bool {
+    !std::env::var("KEYBOARD_ONLY").unwrap_or_default().is_empty()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

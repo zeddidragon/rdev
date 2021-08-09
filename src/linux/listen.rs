@@ -37,7 +37,11 @@ where
         // Prepare record range
         let mut record_range: xrecord::XRecordRange = *xrecord::XRecordAllocRange();
         record_range.device_events.first = xlib::KeyPress as c_uchar;
-        record_range.device_events.last = xlib::MotionNotify as c_uchar;
+        record_range.device_events.last = if crate::keyboard_only() {
+            xlib::KeyRelease
+        } else {
+            xlib::MotionNotify
+        } as c_uchar;
 
         // Create context
         let context = xrecord::XRecordCreateContext(

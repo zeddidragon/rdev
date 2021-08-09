@@ -34,6 +34,10 @@ pub fn listen<T>(callback: T) -> Result<(), ListenError>
 where
     T: FnMut(Event) + 'static,
 {
+    let mut types = kCGEventMaskForAllEvents;
+    if crate::keyboard_only() {
+        types = (1 << CGEventType::KeyDown as u64) + (1 << CGEventType::KeyUp as u64) + (1 << CGEventType::FlagsChanged as u64);
+    }
     unsafe {
         GLOBAL_CALLBACK = Some(Box::new(callback));
         let _pool = NSAutoreleasePool::new(nil);

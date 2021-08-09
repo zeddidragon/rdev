@@ -48,7 +48,9 @@ where
     unsafe {
         GLOBAL_CALLBACK = Some(Box::new(callback));
         set_key_hook(raw_callback)?;
-        set_mouse_hook(raw_callback)?;
+        if !crate::keyboard_only() {
+            set_mouse_hook(raw_callback)?;
+        }
 
         GetMessageA(null_mut(), null_mut(), 0, 0);
     }
