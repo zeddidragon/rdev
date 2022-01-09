@@ -115,6 +115,7 @@ decl_keycodes!(
     Dot, 60,
     Slash, 61,
     Insert, 118,
+    KpDecimal, 91,
     KpReturn, 104,
     KpMinus, 82,
     KpPlus, 86,
@@ -131,8 +132,7 @@ decl_keycodes!(
     Kp8, 80,
     Kp9, 81,
     MetaRight, 134,
-    Apps, 135,
-    KpDelete, 91
+    Apps, 135
 );
 
 #[cfg(test)]

@@ -120,6 +120,7 @@ decl_keycodes!(
    KpPlus, 69,
    KpMultiply, 67,
    KpDivide, 75,
+   KpDecimal, 65,
    Kp0, 82,
    Kp1, 83,
    Kp2, 84,
