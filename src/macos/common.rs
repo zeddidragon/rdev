@@ -91,6 +91,7 @@ pub unsafe fn convert(
     cg_event: &CGEvent,
     keyboard_state: &mut Keyboard,
 ) -> Option<Event> {
+    let mut code = 0;
     let option_type = match _type {
         CGEventType::LeftMouseDown => Some(EventType::ButtonPress(Button::Left)),
         CGEventType::LeftMouseUp => Some(EventType::ButtonRelease(Button::Left)),
@@ -104,16 +105,15 @@ pub unsafe fn convert(
             })
         }
         CGEventType::KeyDown => {
-            let code = cg_event.get_integer_value_field(EventField::KEYBOARD_EVENT_KEYCODE);
-            Some(EventType::KeyPress(key_from_code(code.try_into().ok()?)))
+            code = cg_event.get_integer_value_field(EventField::KEYBOARD_EVENT_KEYCODE).try_into().ok()?;
+            Some(EventType::KeyPress(key_from_code(code)))
         }
         CGEventType::KeyUp => {
-            let code = cg_event.get_integer_value_field(EventField::KEYBOARD_EVENT_KEYCODE);
+            code = cg_event.get_integer_value_field(EventField::KEYBOARD_EVENT_KEYCODE).try_into().ok()?;
             Some(EventType::KeyRelease(key_from_code(code.try_into().ok()?)))
         }
         CGEventType::FlagsChanged => {
-            let code = cg_event.get_integer_value_field(EventField::KEYBOARD_EVENT_KEYCODE);
-            let code = code.try_into().ok()?;
+            code = cg_event.get_integer_value_field(EventField::KEYBOARD_EVENT_KEYCODE).try_into().ok()?;
             let flags = cg_event.get_flags();
             if flags < LAST_FLAGS {
                 LAST_FLAGS = flags;
@@ -134,11 +134,11 @@ pub unsafe fn convert(
     };
     if let Some(event_type) = option_type {
         let name = match event_type {
-            EventType::KeyPress(_) => {
+            EventType::KeyPress(_) | EventType::KeyRelease(_) => {
                 let code =
                     cg_event.get_integer_value_field(EventField::KEYBOARD_EVENT_KEYCODE) as u32;
                 let flags = cg_event.get_flags();
-                None //keyboard_state.create_string_for_key(code, flags) // disable this, it is buggy and useless for me
+                keyboard_state.create_string_for_key(code, flags) 
             }
             _ => None,
         };
@@ -146,6 +146,7 @@ pub unsafe fn convert(
             event_type,
             time: SystemTime::now(),
             name,
+            code: code as _,
         });
     }
     None

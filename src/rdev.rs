@@ -264,6 +264,7 @@ pub struct Event {
     pub time: SystemTime,
     pub name: Option<String>,
     pub event_type: EventType,
+    pub code: u16,
 }
 
 /// We can define a dummy Keyboard, that we will use to detect

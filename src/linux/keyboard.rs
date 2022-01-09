@@ -225,7 +225,11 @@ impl KeyboardState for Keyboard {
                     self.state.shift = false;
                     None
                 }
-                _ => None,
+                key => {
+                    let keycode = code_from_key(*key)?;
+                    let state = self.state.value();
+                    unsafe { self.name_from_code(keycode, state) }
+                }
             },
             _ => None,
         }

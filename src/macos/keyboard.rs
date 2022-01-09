@@ -3,7 +3,7 @@ use crate::macos::keycodes::code_from_key;
 use crate::rdev::{EventType, Key, KeyboardState};
 use core_foundation::base::{CFRelease, OSStatus};
 use core_foundation::string::UniChar;
-use core_foundation_sys::data::{CFDataGetBytePtr, CFDataRef};
+use core_foundation_sys::data::CFDataGetBytePtr;
 use core_graphics::event::CGEventFlags;
 use std::convert::TryInto;
 use std::ffi::c_void;
@@ -36,7 +36,11 @@ const BUF_LEN: usize = 4;
 #[link(name = "Carbon", kind = "framework")]
 extern "C" {
     fn TISCopyCurrentKeyboardInputSource() -> TISInputSourceRef;
-    fn TISGetInputSourceProperty(source: TISInputSourceRef, property: *mut c_void) -> CFDataRef;
+    fn TISCopyCurrentKeyboardLayoutInputSource() -> TISInputSourceRef;
+    fn TISCopyCurrentASCIICapableKeyboardLayoutInputSource() -> TISInputSourceRef;
+    // Actually return CFDataRef which is const here, but for coding convienence, return *mut c_void
+    fn TISGetInputSourceProperty(source: TISInputSourceRef, property: *const c_void)
+        -> *mut c_void;
     fn UCKeyTranslate(
         layout: *const u8,
         code: u16,
@@ -90,18 +94,41 @@ impl Keyboard {
         code: u32,
         modifier_state: ModifierState,
     ) -> Option<String> {
-        let keyboard = TISCopyCurrentKeyboardInputSource();
-        if keyboard.is_null() {
-            return None;
+        let mut keyboard = TISCopyCurrentKeyboardInputSource();
+        let mut layout = std::ptr::null_mut();
+        if !keyboard.is_null() {
+            layout = TISGetInputSourceProperty(keyboard, kTISPropertyUnicodeKeyLayoutData);
         }
-        let layout = TISGetInputSourceProperty(keyboard, kTISPropertyUnicodeKeyLayoutData);
         if layout.is_null() {
-            CFRelease(keyboard);
+            if !keyboard.is_null() {
+                CFRelease(keyboard);
+            }
+            // https://github.com/microsoft/vscode/issues/23833
+            keyboard = TISCopyCurrentKeyboardLayoutInputSource();
+            if !keyboard.is_null() {
+                layout = TISGetInputSourceProperty(keyboard, kTISPropertyUnicodeKeyLayoutData);
+            }
+        }
+        if layout.is_null() {
+            if !keyboard.is_null() {
+                CFRelease(keyboard);
+            }
+            keyboard = TISCopyCurrentASCIICapableKeyboardLayoutInputSource();
+            if !keyboard.is_null() {
+                layout = TISGetInputSourceProperty(keyboard, kTISPropertyUnicodeKeyLayoutData);
+            }
+        }
+        if layout.is_null() {
+            if !keyboard.is_null() {
+                CFRelease(keyboard);
+            }
             return None;
         }
-        let layout_ptr = CFDataGetBytePtr(layout);
+        let layout_ptr = CFDataGetBytePtr(layout as _);
         if layout_ptr.is_null() {
-            CFRelease(keyboard);
+            if !keyboard.is_null() {
+                CFRelease(keyboard);
+            }
             return None;
         }
 
@@ -120,7 +147,9 @@ impl Keyboard {
             &mut length as *mut UniCharCount,     // actual string length
             &mut buff as *mut [UniChar; BUF_LEN], // unicode string
         );
-        CFRelease(keyboard);
+        if !keyboard.is_null() {
+            CFRelease(keyboard);
+        }
 
         String::from_utf16(&buff[..length]).ok()
     }

@@ -19,10 +19,10 @@ impl From<HookError> for ListenError {
 
 unsafe extern "system" fn raw_callback(code: c_int, param: WPARAM, lpdata: LPARAM) -> LRESULT {
     if code == HC_ACTION {
-        let opt = convert(param, lpdata);
+        let (opt, code) = convert(param, lpdata);
         if let Some(event_type) = opt {
             let name = match &event_type {
-                EventType::KeyPress(_key) => match (*KEYBOARD).lock() {
+                EventType::KeyPress(_) | EventType::KeyRelease(_) => match (*KEYBOARD).lock() {
                     Ok(mut keyboard) => keyboard.get_name(lpdata),
                     Err(_) => None,
                 },
@@ -32,6 +32,7 @@ unsafe extern "system" fn raw_callback(code: c_int, param: WPARAM, lpdata: LPARA
                 event_type,
                 time: SystemTime::now(),
                 name,
+                code,
             };
             if let Some(callback) = &mut GLOBAL_CALLBACK {
                 callback(event);

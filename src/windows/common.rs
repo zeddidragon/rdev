@@ -48,16 +48,17 @@ pub unsafe fn get_button_code(lpdata: LPARAM) -> WORD {
     HIWORD(mouse.mouseData)
 }
 
-pub unsafe fn convert(param: WPARAM, lpdata: LPARAM) -> Option<EventType> {
-    match param.try_into() {
+pub unsafe fn convert(param: WPARAM, lpdata: LPARAM) -> (Option<EventType>, u16) {
+    let mut code = 0;
+    (match param.try_into() {
         Ok(WM_KEYDOWN) | Ok(WM_SYSKEYDOWN) => {
-            let code = get_code(lpdata);
-            let key = key_from_code(code as u16);
+            code = get_code(lpdata) as u16;
+            let key = key_from_code(code);
             Some(EventType::KeyPress(key))
         }
         Ok(WM_KEYUP) | Ok(WM_SYSKEYUP) => {
-            let code = get_code(lpdata);
-            let key = key_from_code(code as u16);
+            code = get_code(lpdata) as u16;
+            let key = key_from_code(code);
             Some(EventType::KeyRelease(key))
         }
         Ok(WM_LBUTTONDOWN) => Some(EventType::ButtonPress(Button::Left)),
@@ -96,7 +97,7 @@ pub unsafe fn convert(param: WPARAM, lpdata: LPARAM) -> Option<EventType> {
             })
         }
         _ => None,
-    }
+    }, code)
 }
 
 type RawCallback = unsafe extern "system" fn(code: c_int, param: WPARAM, lpdata: LPARAM) -> LRESULT;

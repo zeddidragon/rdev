@@ -67,6 +67,7 @@ pub fn convert(
         event_type,
         time: SystemTime::now(),
         name,
+        code: code as _,
     })
 }
 
