@@ -221,7 +221,6 @@ pub enum Key {
     Print,
     Select,
     Execute,
-    Snapshot,
     Help,
     Sleep,
     Separator,
