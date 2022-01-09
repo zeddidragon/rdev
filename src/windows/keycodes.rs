@@ -132,7 +132,10 @@ decl_keycodes! {
     Kp7, 103,
     Kp8, 104,
     Kp9, 105,
-    KpDelete, 110
+    KpDelete, 110,
+    MetaRight, 92,
+    Apps, 93,
+    Pause, 19,
 }
 
 #[cfg(test)]
