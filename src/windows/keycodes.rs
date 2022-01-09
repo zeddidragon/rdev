@@ -135,6 +135,20 @@ decl_keycodes! {
     KpDelete, 110,
     MetaRight, 92,
     Apps, 93,
+    Cancel, 0x03,
+    Clear, 0x0C,
+    Kana, 0x15,
+    Junja, 0x17,
+    Final, 0x18,
+    Hanja, 0x19,
+    Convert, 0x1C,
+    Select, 0x29,
+    Print, 0x2A,
+    Execute, 0x2B,
+    Snapshot, 0x2C,
+    Help, 0x2F,
+    Sleep, 0x5F,
+    Separator, 0x6C,
     Pause, 19
 }
 
