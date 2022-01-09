@@ -93,10 +93,15 @@ const PRINT_SCREEN: CGKeyCode = 105;
 const SCROLL_LOCK: CGKeyCode = 107;
 const PAUSE: CGKeyCode = 113;
 const NUMPAD_RETURN: CGKeyCode = 76;
+const APPS: CGKeyCode = 110;
+const NUM_LOCKS: CGKeyCode = 71;
 
 pub fn code_from_key(key: Key) -> Option<CGKeyCode> {
     match key {
+        Key::NumLock => Some(NUM_LOCKS),
+        Key::Apps => Some(APPS),
         Key::Insert => Some(INSERT),
+        Key::Apps => Some(APPS),
         Key::PageUp => Some(PAGE_UP),
         Key::PageDown => Some(PAGE_DOWN),
         Key::Home => Some(HOME),
@@ -191,6 +196,8 @@ pub fn code_from_key(key: Key) -> Option<CGKeyCode> {
 
 pub fn key_from_code(code: CGKeyCode) -> Key {
     match code {
+        NUM_LOCKS => Key::NumLock,
+        APPS => Key::Apps,
         INSERT => Key::Insert,
         PAGE_UP => Key::PageUp,
         PAGE_DOWN => Key::PageDown,

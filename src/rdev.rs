@@ -208,6 +208,7 @@ pub enum Key {
     Kp9,
     KpDelete,
     Function,
+    Apps,
     Unknown(u32),
 }
 
