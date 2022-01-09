@@ -130,6 +130,8 @@ decl_keycodes!(
     Kp7, 79,
     Kp8, 80,
     Kp9, 81,
+    MetaRight, 134,
+    Apps, 135,
     KpDelete, 91
 );
 
