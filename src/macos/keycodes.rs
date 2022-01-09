@@ -10,6 +10,7 @@ const BACKSPACE: CGKeyCode = 51;
 const CAPS_LOCK: CGKeyCode = 57;
 /// Control Right does not exist on Mac
 const CONTROL_LEFT: CGKeyCode = 59;
+const CONTROL_RIGHT: CGKeyCode = 62;
 const DOWN_ARROW: CGKeyCode = 125;
 const ESCAPE: CGKeyCode = 53;
 const F1: CGKeyCode = 122;
@@ -82,14 +83,35 @@ const KEY_M: CGKeyCode = 46;
 const COMMA: CGKeyCode = 43;
 const DOT: CGKeyCode = 47;
 const SLASH: CGKeyCode = 44;
+const DELETE: CGKeyCode = 117;
+const INSERT: CGKeyCode = 114;
+const PAGE_UP: CGKeyCode = 116;
+const PAGE_DOWN: CGKeyCode = 121;
+const HOME: CGKeyCode = 115;
+const END: CGKeyCode = 119;
+const PRINT_SCREEN: CGKeyCode = 105;
+const SCROLL_LOCK: CGKeyCode = 107;
+const PAUSE: CGKeyCode = 113;
+const NUMPAD_RETURN: CGKeyCode = 76;
 
 pub fn code_from_key(key: Key) -> Option<CGKeyCode> {
     match key {
+        Key::Insert => Some(INSERT),
+        Key::PageUp => Some(PAGE_UP),
+        Key::PageDown => Some(PAGE_DOWN),
+        Key::Home => Some(HOME),
+        Key::End => Some(END),
+        Key::PrintScreen => Some(PRINT_SCREEN),
+        Key::ScrollLock => Some(SCROLL_LOCK),
+        Key::Pause => Some(PAUSE),
+        Key::KpReturn => Some(NUMPAD_RETURN),
+        Key::Delete => Some(DELETE),
         Key::Alt => Some(ALT),
         Key::AltGr => Some(ALT_GR),
         Key::Backspace => Some(BACKSPACE),
         Key::CapsLock => Some(CAPS_LOCK),
         Key::ControlLeft => Some(CONTROL_LEFT),
+        Key::ControlRight => Some(CONTROL_RIGHT),
         Key::DownArrow => Some(DOWN_ARROW),
         Key::Escape => Some(ESCAPE),
         Key::F1 => Some(F1),
@@ -169,11 +191,22 @@ pub fn code_from_key(key: Key) -> Option<CGKeyCode> {
 
 pub fn key_from_code(code: CGKeyCode) -> Key {
     match code {
+        INSERT => Key::Insert,
+        PAGE_UP => Key::PageUp,
+        PAGE_DOWN => Key::PageDown,
+        HOME => Key::Home,
+        END => Key::End,
+        PRINT_SCREEN => Key::PrintScreen,
+        SCROLL_LOCK => Key::ScrollLock,
+        PAUSE => Key::Pause,
+        NUMPAD_RETURN => Key::KpReturn,
+        DELETE => Key::Delete,
         ALT => Key::Alt,
         ALT_GR => Key::AltGr,
         BACKSPACE => Key::Backspace,
         CAPS_LOCK => Key::CapsLock,
         CONTROL_LEFT => Key::ControlLeft,
+        CONTROL_RIGHT => Key::ControlRight,
         DOWN_ARROW => Key::DownArrow,
         ESCAPE => Key::Escape,
         F1 => Key::F1,
