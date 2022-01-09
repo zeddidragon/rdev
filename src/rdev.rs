@@ -216,7 +216,7 @@ pub enum Key {
     Junja,
     Final,
     Hanja,
-    hanji,
+    Hanji,
     Convert,
     Print,
     Select,

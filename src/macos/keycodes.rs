@@ -101,7 +101,6 @@ pub fn code_from_key(key: Key) -> Option<CGKeyCode> {
         Key::NumLock => Some(NUM_LOCKS),
         Key::Apps => Some(APPS),
         Key::Insert => Some(INSERT),
-        Key::Apps => Some(APPS),
         Key::PageUp => Some(PAGE_UP),
         Key::PageDown => Some(PAGE_DOWN),
         Key::Home => Some(HOME),
