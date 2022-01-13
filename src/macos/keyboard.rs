@@ -15,20 +15,21 @@ type UniCharCount = usize;
 
 type OptionBits = c_uint;
 #[allow(non_upper_case_globals)]
-static kUCKeyTranslateDeadKeysBit: OptionBits = 1 << 31;
+const kUCKeyTranslateDeadKeysBit: OptionBits = 1 << 31;
 #[allow(non_upper_case_globals)]
-static kUCKeyActionDown: u16 = 0;
+const kUCKeyActionDown: u16 = 0;
+/*
 #[allow(non_upper_case_globals)]
-static NSEventModifierFlagCapsLock: u64 = 1 << 16;
+const NSEventModifierFlagCapsLock: u64 = 1 << 16;
 #[allow(non_upper_case_globals)]
-static NSEventModifierFlagShift: u64 = 1 << 17;
+const NSEventModifierFlagShift: u64 = 1 << 17;
 #[allow(non_upper_case_globals)]
-static NSEventModifierFlagControl: u64 = 1 << 18;
+const NSEventModifierFlagControl: u64 = 1 << 18;
 #[allow(non_upper_case_globals)]
-static NSEventModifierFlagOption: u64 = 1 << 19;
+const NSEventModifierFlagOption: u64 = 1 << 19;
 #[allow(non_upper_case_globals)]
-static NSEventModifierFlagCommand: u64 = 1 << 20;
-
+const NSEventModifierFlagCommand: u64 = 1 << 20;
+*/
 const BUF_LEN: usize = 4;
 
 #[cfg(target_os = "macos")]
@@ -80,20 +81,23 @@ impl Keyboard {
         }
     }
 
+    #[inline]
     pub(crate) unsafe fn create_string_for_key(
         &mut self,
         code: u32,
-        flags: CGEventFlags,
+        _flags: CGEventFlags,
     ) -> Option<String> {
-        let modifier_state = flags_to_state(flags.bits());
-        self.string_from_code(code, modifier_state)
+        // let modifier_state = flags_to_state(flags.bits());
+        self.string_from_code(code, 0)
     }
 
-    pub(crate) unsafe fn string_from_code(
+    #[inline]
+    unsafe fn string_from_code(
         &mut self,
         code: u32,
         modifier_state: ModifierState,
     ) -> Option<String> {
+        // let mut now = std::time::Instant::now();
         let mut keyboard = TISCopyCurrentKeyboardInputSource();
         let mut layout = std::ptr::null_mut();
         if !keyboard.is_null() {
@@ -131,6 +135,7 @@ impl Keyboard {
             }
             return None;
         }
+        // println!("{:?}", now.elapsed());
 
         let mut buff = [0_u16; BUF_LEN];
         let kb_type = LMGetKbdType();
@@ -142,15 +147,19 @@ impl Keyboard {
             modifier_state,
             kb_type,
             kUCKeyTranslateDeadKeysBit,
-            &mut self.dead_state,                 // deadKeyState
-            BUF_LEN,                              // max string length
-            &mut length as *mut UniCharCount,     // actual string length
-            &mut buff as *mut [UniChar; BUF_LEN], // unicode string
+            &mut self.dead_state,
+            BUF_LEN,
+            &mut length,
+            &mut buff,
         );
         if !keyboard.is_null() {
             CFRelease(keyboard);
         }
+        //println!("{:?}", now.elapsed());
 
+        if length == 0 {
+            return None;
+        }
         String::from_utf16(&buff[..length]).ok()
     }
 }
@@ -190,6 +199,7 @@ impl KeyboardState for Keyboard {
     }
 }
 
+/*
 #[allow(clippy::identity_op)]
 pub unsafe fn flags_to_state(flags: u64) -> ModifierState {
     let has_alt = flags & NSEventModifierFlagOption;
@@ -215,3 +225,4 @@ pub unsafe fn flags_to_state(flags: u64) -> ModifierState {
     }
     modifier
 }
+*/

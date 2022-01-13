@@ -1,6 +1,6 @@
 #![allow(clippy::upper_case_acronyms)]
 use crate::macos::keyboard::Keyboard;
-use crate::rdev::{Button, Event, EventType};
+use crate::rdev::{Button, Event, EventType, Key};
 use cocoa::base::id;
 use core_graphics::event::{CGEvent, CGEventFlags, CGEventTapLocation, CGEventType, EventField};
 use lazy_static::lazy_static;
@@ -105,15 +105,24 @@ pub unsafe fn convert(
             })
         }
         CGEventType::KeyDown => {
-            code = cg_event.get_integer_value_field(EventField::KEYBOARD_EVENT_KEYCODE).try_into().ok()?;
+            code = cg_event
+                .get_integer_value_field(EventField::KEYBOARD_EVENT_KEYCODE)
+                .try_into()
+                .ok()?;
             Some(EventType::KeyPress(key_from_code(code)))
         }
         CGEventType::KeyUp => {
-            code = cg_event.get_integer_value_field(EventField::KEYBOARD_EVENT_KEYCODE).try_into().ok()?;
+            code = cg_event
+                .get_integer_value_field(EventField::KEYBOARD_EVENT_KEYCODE)
+                .try_into()
+                .ok()?;
             Some(EventType::KeyRelease(key_from_code(code.try_into().ok()?)))
         }
         CGEventType::FlagsChanged => {
-            code = cg_event.get_integer_value_field(EventField::KEYBOARD_EVENT_KEYCODE).try_into().ok()?;
+            code = cg_event
+                .get_integer_value_field(EventField::KEYBOARD_EVENT_KEYCODE)
+                .try_into()
+                .ok()?;
             let flags = cg_event.get_flags();
             if flags < LAST_FLAGS {
                 LAST_FLAGS = flags;
@@ -134,11 +143,15 @@ pub unsafe fn convert(
     };
     if let Some(event_type) = option_type {
         let name = match event_type {
-            EventType::KeyPress(_) | EventType::KeyRelease(_) => {
+            EventType::KeyPress(k) | EventType::KeyRelease(k) => {
                 let code =
                     cg_event.get_integer_value_field(EventField::KEYBOARD_EVENT_KEYCODE) as u32;
                 let flags = cg_event.get_flags();
-                keyboard_state.create_string_for_key(code, flags) 
+                let mut s = keyboard_state.create_string_for_key(code, flags);
+                if s.is_none() {
+                    s = Some(key_to_name(k).to_owned())
+                }
+                s
             }
             _ => None,
         };
@@ -150,4 +163,59 @@ pub unsafe fn convert(
         });
     }
     None
+}
+
+#[inline]
+fn key_to_name(key: Key) -> &'static str {
+    use Key::*;
+    match key {
+        KeyA => "a",
+        KeyB => "b",
+        KeyC => "c",
+        KeyD => "d",
+        KeyE => "e",
+        KeyF => "f",
+        KeyG => "g",
+        KeyH => "h",
+        KeyI => "i",
+        KeyJ => "j",
+        KeyK => "k",
+        KeyL => "l",
+        KeyM => "m",
+        KeyN => "n",
+        KeyO => "o",
+        KeyP => "p",
+        KeyQ => "q",
+        KeyR => "r",
+        KeyS => "s",
+        KeyT => "t",
+        KeyU => "u",
+        KeyV => "v",
+        KeyW => "w",
+        KeyX => "x",
+        KeyY => "y",
+        KeyZ => "z",
+        Num0 => "0",
+        Num1 => "1",
+        Num2 => "2",
+        Num3 => "3",
+        Num4 => "4",
+        Num5 => "5",
+        Num6 => "6",
+        Num7 => "7",
+        Num8 => "8",
+        Num9 => "9",
+        Minus => "-",
+        Equal => "=",
+        LeftBracket => "[",
+        RightBracket => "]",
+        BackSlash => "\\",
+        SemiColon => ";",
+        Quote => "\"",
+        Comma => ",",
+        Dot => ".",
+        Slash => "/",
+        BackQuote => "`",
+        _ => "",
+    }
 }
