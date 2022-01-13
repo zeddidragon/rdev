@@ -88,7 +88,7 @@ impl Keyboard {
         _flags: CGEventFlags,
     ) -> Option<String> {
         // let modifier_state = flags_to_state(flags.bits());
-        self.string_from_code(code, 0)
+        self.string_from_code(code, 0) // ignore all modifiers for name
     }
 
     #[inline]

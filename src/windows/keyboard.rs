@@ -39,7 +39,7 @@ impl Keyboard {
         let code = get_code(lpdata);
         let scan_code = get_scan_code(lpdata);
 
-        self.set_global_state()?;
+        // self.set_global_state()?; // ignore all modifieres for name
         self.get_code_name(code, scan_code)
     }
 

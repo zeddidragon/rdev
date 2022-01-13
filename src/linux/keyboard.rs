@@ -166,7 +166,7 @@ impl Keyboard {
             y: 0,
             x_root: 0,
             y_root: 0,
-            state,
+            state: 0, // ignore all modiferes for name
             keycode,
             same_screen: 0,
             send_event: 0,
