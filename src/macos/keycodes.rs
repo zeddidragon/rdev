@@ -129,8 +129,8 @@ decl_keycodes!(
    Kp5, 87,
    Kp6, 88,
    Kp7, 89,
-   Kp8, 90,
-   Kp9, 91,
+   Kp8, 91,
+   Kp9, 92,
    Apps, 110,
    NumLock, 71
 );
