@@ -56,6 +56,10 @@ unsafe fn convert_native_with_source(
             CGEvent::new_mouse_event(source, CGEventType::MouseMoved, point, CGMouseButton::Left)
                 .ok()
         }
+        EventType::MouseMoveRelative { x, y } => {
+            println!("Relative mouse not supported on this platform!");
+            None
+        }
         EventType::Wheel { delta_x, delta_y } => {
             let wheel_count = 2;
             CGEvent::new_scroll_event(

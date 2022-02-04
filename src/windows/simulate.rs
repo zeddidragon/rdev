@@ -129,5 +129,13 @@ pub fn simulate(event_type: &EventType) -> Result<(), SimulateError> {
                 (*y as i32 + 1) * 65535 / height,
             )
         }
+        EventType::MouseMoveRelative { delta_x, delta_y } => {
+            sim_mouse_event(
+                MOUSEEVENTF_MOVE | MOUSEEVENTF_VIRTUALDESK,
+                0,
+                *delta_x as i32,
+                *delta_y as i32,
+            )
+        }
     }
 }
