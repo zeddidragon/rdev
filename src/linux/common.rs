@@ -59,9 +59,11 @@ pub fn convert(
     type_: c_int,
     x: f64,
     y: f64,
+    state: u16,
 ) -> Option<Event> {
     let event_type = convert_event(code as c_uchar, type_, x, y)?;
     let kb: &mut Keyboard = (*keyboard).as_mut()?;
+    kb.set_raw_state(state);
     let name = kb.add(&event_type);
     Some(Event {
         event_type,

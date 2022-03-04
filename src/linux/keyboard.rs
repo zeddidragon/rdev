@@ -13,6 +13,7 @@ struct State {
     caps_lock: bool,
     shift: bool,
     meta: bool,
+    raw: u16,
 }
 
 // Inspired from https://github.com/wavexx/screenkey
@@ -28,10 +29,14 @@ impl State {
             caps_lock: false,
             meta: false,
             shift: false,
+            raw: 0,
         }
     }
 
     fn value(&self) -> c_uint {
+        // ignore all modiferes for name
+        (self.raw as c_uint) & (!xlib::Mod1Mask) & (!xlib::ControlMask) & (!xlib::LockMask) & (!xlib::Mod4Mask) & (!xlib::ShiftMask)
+        /*
         let mut res: c_uint = 0;
         if self.alt {
             res += xlib::Mod1Mask;
@@ -49,6 +54,7 @@ impl State {
             res += xlib::ShiftMask;
         }
         res
+        */
     }
 }
 
@@ -146,6 +152,10 @@ impl Keyboard {
         }
     }
 
+   pub(crate) fn set_raw_state(&mut self, state: u16) {
+       self.state.raw = state;
+   }
+
     pub(crate) unsafe fn name_from_code(
         &mut self,
         keycode: c_uint,
@@ -166,7 +176,7 @@ impl Keyboard {
             y: 0,
             x_root: 0,
             y_root: 0,
-            state: 0, // ignore all modiferes for name
+            state,
             keycode,
             same_screen: 0,
             send_event: 0,
