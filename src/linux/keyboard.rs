@@ -35,7 +35,7 @@ impl State {
 
     fn value(&self) -> c_uint {
         // ignore all modiferes for name
-        (self.raw as c_uint) & (!xlib::Mod1Mask) & (!xlib::ControlMask) & (!xlib::LockMask) & (!xlib::Mod4Mask) & (!xlib::ShiftMask)
+        (self.raw as c_uint) & !0xFF
         /*
         let mut res: c_uint = 0;
         if self.alt {
