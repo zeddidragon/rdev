@@ -1,5 +1,7 @@
 use crate::rdev::{Event, EventType, ListenError};
-use crate::windows::common::{convert, set_key_hook, set_mouse_hook, HookError, HOOK, KEYBOARD};
+use crate::windows::common::{
+    convert, get_scan_code, set_key_hook, set_mouse_hook, HookError, HOOK, KEYBOARD,
+};
 use std::os::raw::c_int;
 use std::ptr::null_mut;
 use std::time::SystemTime;
@@ -33,6 +35,7 @@ unsafe extern "system" fn raw_callback(code: c_int, param: WPARAM, lpdata: LPARA
                 time: SystemTime::now(),
                 name,
                 code,
+                scan_code: get_scan_code(lpdata),
             };
             if let Some(callback) = &mut GLOBAL_CALLBACK {
                 callback(event);

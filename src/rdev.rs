@@ -281,6 +281,8 @@ pub struct Event {
     pub name: Option<String>,
     pub event_type: EventType,
     pub code: u16,
+    #[cfg(windows)]
+    pub scan_code: u32,
 }
 
 /// We can define a dummy Keyboard, that we will use to detect
