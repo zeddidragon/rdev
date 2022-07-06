@@ -70,7 +70,7 @@ impl Keyboard {
         Some(())
     }
 
-    pub(crate) unsafe fn get_code_name(&mut self, code: UINT, scan_code: UINT) -> Option<String> {
+    pub unsafe fn get_code_name(&mut self, code: UINT, scan_code: UINT) -> Option<String> {
         let current_window_thread_id = GetWindowThreadProcessId(GetForegroundWindow(), null_mut());
         let state_ptr = self.last_state.as_mut_ptr();
         const BUF_LEN: i32 = 32;
@@ -83,11 +83,10 @@ impl Keyboard {
         let result = match len {
             0 => None,
             -1 => {
-                is_dead = true;
-                self.clear_keyboard_buffer(code, scan_code, layout);
-                None
+                ToUnicodeEx(code, scan_code, state_ptr, buff_ptr, 8 - 1, 0, layout);
+                String::from_utf16(&buff[..1 as usize]).ok()
             }
-            len if len > 0 => String::from_utf16(&buff[..len as usize]).ok(),
+            len if len > 0 => String::from_utf16(&buff[..1 as usize]).ok(),
             _ => None,
         };
 
