@@ -70,7 +70,7 @@ impl Keyboard {
         Some(())
     }
 
-    pub(crate) unsafe fn get_code_name(&mut self, code: UINT, scan_code: UINT) -> Option<String> {
+    pub unsafe fn get_code_name(&mut self, code: UINT, scan_code: UINT) -> Option<String> {
         let current_window_thread_id = GetWindowThreadProcessId(GetForegroundWindow(), null_mut());
         let state_ptr = self.last_state.as_mut_ptr();
         const BUF_LEN: i32 = 32;
