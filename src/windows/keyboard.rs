@@ -71,6 +71,7 @@ impl Keyboard {
     }
 
     pub unsafe fn get_code_name(&mut self, code: UINT, scan_code: UINT) -> Option<String> {
+        // todo: Affects input from other apps
         let current_window_thread_id = GetWindowThreadProcessId(GetForegroundWindow(), null_mut());
         let state_ptr = self.last_state.as_mut_ptr();
         const BUF_LEN: i32 = 32;
