@@ -135,7 +135,7 @@ decl_keycodes! {
     KeyM, 77, 50,
     Comma, 188, 51,
     Dot, 190, 52,
-    Slash, 191, 0,
+    Slash, 191, 53,
     Insert, 45, 0,
     KpMinus, 109, 0,
     KpPlus, 107, 0,

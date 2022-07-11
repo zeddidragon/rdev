@@ -50,11 +50,13 @@ fn main() {
         #[cfg(target_os = "windows")]
         let scancode_key = rdev::key_from_scancode(evt.scan_code);
         #[cfg(target_os = "windows")]
-        let key: RdevKey = if key == RdevKey::AltGr {
-            // note: alt and altgr have same keycode.
-            RdevKey::AltGr
+        let key: RdevKey = if key == RdevKey::AltGr || key == RdevKey::KpDivide {
+            // note: alt and altgr have same scancode.
+            // slash and divide have same scancode.
+            key
         } else if scancode_key != RdevKey::Unknown(evt.scan_code) {
-            // note: numpad should use keycode directly.
+            // note: numpad should use scancode directly,
+            dbg!(scancode_key);
             rdev::key_from_scancode(evt.scan_code)
         } else {
             key
@@ -62,7 +64,6 @@ fn main() {
 
         // todo: up down left right in numpad
         // #[cfg(target_os = "linux")]
-        
         dbg!(key);
         println!("--------------");
     };
