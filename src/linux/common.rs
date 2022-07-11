@@ -70,6 +70,7 @@ pub fn convert(
         time: SystemTime::now(),
         name,
         code: code as _,
+        scan_code: code as _,
     })
 }
 

@@ -1,10 +1,9 @@
 use crate::rdev::Key;
-use std::os::raw::c_uint;
 
 macro_rules! decl_keycodes {
     ($($key:ident, $code:literal),*) => {
         //TODO: make const when rust lang issue #49146 is fixed
-        pub fn code_from_key(key: Key) -> Option<c_uint> {
+        pub fn code_from_key(key: Key) -> Option<u32> {
             match key {
                 $(
                     Key::$key => Some($code),
@@ -15,13 +14,23 @@ macro_rules! decl_keycodes {
         }
 
         //TODO: make const when rust lang issue #49146 is fixed
-        pub fn key_from_code(code: c_uint) -> Key {
+        pub fn key_from_code(code: u32) -> Key {
             match code {
                 $(
                     $code => Key::$key,
                 )*
                 _ => Key::Unknown(code)
             }
+        }
+
+        pub fn scancode_from_key(key:Key) -> Option<u32> {
+            // keycode
+            code_from_key(key)
+        }
+
+        pub fn key_from_scancode(scancode: u32) -> Key {
+            // keycode
+            key_from_code(scancode)
         }
     };
 }
