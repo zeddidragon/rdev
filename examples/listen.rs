@@ -60,8 +60,8 @@ fn main() {
             key
         };
 
-        // todo: numpad
-        #[cfg(target_os = "linux")]
+        // todo: up down left right in numpad
+        // #[cfg(target_os = "linux")]
         
         dbg!(key);
         println!("--------------");

@@ -53,12 +53,12 @@ pub unsafe fn convert(param: WPARAM, lpdata: LPARAM) -> (Option<EventType>, u16)
     (match param.try_into() {
         Ok(WM_KEYDOWN) | Ok(WM_SYSKEYDOWN) => {
             code = get_code(lpdata) as u16;
-            let key = key_from_code(code);
+            let key = key_from_code(code.into());
             Some(EventType::KeyPress(key))
         }
         Ok(WM_KEYUP) | Ok(WM_SYSKEYUP) => {
             code = get_code(lpdata) as u16;
-            let key = key_from_code(code);
+            let key = key_from_code(code.into());
             Some(EventType::KeyRelease(key))
         }
         Ok(WM_LBUTTONDOWN) => Some(EventType::ButtonPress(Button::Left)),
