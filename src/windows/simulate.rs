@@ -1,17 +1,19 @@
 use crate::rdev::{Button, EventType, SimulateError};
-use crate::windows::keycodes::{code_from_key, get_win_codes};
+use crate::windows::keycodes::{code_from_key, get_win_codes, get_win_key};
 use std::convert::{TryFrom, TryInto};
 use std::mem::size_of;
+use std::ptr::null_mut;
 use winapi::ctypes::{c_int, c_short};
 use winapi::shared::minwindef::{DWORD, UINT, WORD};
 use winapi::shared::ntdef::LONG;
 use winapi::um::winuser::{
-    GetSystemMetrics, INPUT_u, MapVirtualKeyA, SendInput, INPUT, INPUT_KEYBOARD, INPUT_MOUSE,
-    KEYBDINPUT, KEYEVENTF_KEYUP, MAPVK_VSC_TO_VK_EX, MOUSEEVENTF_ABSOLUTE, MOUSEEVENTF_HWHEEL,
-    MOUSEEVENTF_LEFTDOWN, MOUSEEVENTF_LEFTUP, MOUSEEVENTF_MIDDLEDOWN, MOUSEEVENTF_MIDDLEUP,
-    MOUSEEVENTF_MOVE, MOUSEEVENTF_RIGHTDOWN, MOUSEEVENTF_RIGHTUP, MOUSEEVENTF_VIRTUALDESK,
-    MOUSEEVENTF_WHEEL, MOUSEEVENTF_XDOWN, MOUSEEVENTF_XUP, MOUSEINPUT, SM_CXVIRTUALSCREEN,
-    SM_CYVIRTUALSCREEN, WHEEL_DELTA,
+    GetForegroundWindow, GetKeyboardLayout, GetSystemMetrics, GetWindowThreadProcessId, INPUT_u,
+    MapVirtualKeyA, MapVirtualKeyExA, MapVirtualKeyExW, SendInput, INPUT, INPUT_KEYBOARD,
+    INPUT_MOUSE, KEYBDINPUT, KEYEVENTF_KEYUP, MAPVK_VSC_TO_VK_EX, MOUSEEVENTF_ABSOLUTE,
+    MOUSEEVENTF_HWHEEL, MOUSEEVENTF_LEFTDOWN, MOUSEEVENTF_LEFTUP, MOUSEEVENTF_MIDDLEDOWN,
+    MOUSEEVENTF_MIDDLEUP, MOUSEEVENTF_MOVE, MOUSEEVENTF_RIGHTDOWN, MOUSEEVENTF_RIGHTUP,
+    MOUSEEVENTF_VIRTUALDESK, MOUSEEVENTF_WHEEL, MOUSEEVENTF_XDOWN, MOUSEEVENTF_XUP, MOUSEINPUT,
+    SM_CXVIRTUALSCREEN, SM_CYVIRTUALSCREEN, WHEEL_DELTA,
 };
 /// Not defined in win32 but define here for clarity
 static KEYEVENTF_KEYDOWN: DWORD = 0;
@@ -77,20 +79,52 @@ pub fn simulate(event_type: &EventType) -> Result<(), SimulateError> {
     match event_type {
         EventType::KeyPress(key) => {
             let (code, scancode) = get_win_codes(*key);
-            let code = if scancode != 0 {
-                unsafe { MapVirtualKeyA(scancode.try_into().unwrap(), MAPVK_VSC_TO_VK_EX) }
+            let code = if code == 165 {
+                // altgr
+                165
+            } else if scancode != 0 {
+                unsafe {
+                    let current_window_thread_id =
+                        GetWindowThreadProcessId(GetForegroundWindow(), null_mut());
+                    let layout = GetKeyboardLayout(current_window_thread_id);
+                    let new_code =
+                        MapVirtualKeyExW(scancode.try_into().unwrap(), MAPVK_VSC_TO_VK_EX, layout);
+                    new_code
+                }
             } else {
                 code
             };
+            println!(
+                "keydown new code {:?} {:?} {:?}",
+                code,
+                scancode,
+                get_win_key(code, scancode)
+            );
             sim_keyboard_event(KEYEVENTF_KEYDOWN, code.try_into().unwrap(), 0)
         }
         EventType::KeyRelease(key) => {
             let (code, scancode) = get_win_codes(*key);
-            let code = if scancode != 0 {
-                unsafe { MapVirtualKeyA(scancode.try_into().unwrap(), MAPVK_VSC_TO_VK_EX) }
+            let code = if code == 165 {
+                // altgr
+                165
+            } else if scancode != 0 {
+                unsafe {
+                    let current_window_thread_id =
+                        GetWindowThreadProcessId(GetForegroundWindow(), null_mut());
+                    let layout = GetKeyboardLayout(current_window_thread_id);
+                    let new_code =
+                        MapVirtualKeyExW(scancode.try_into().unwrap(), MAPVK_VSC_TO_VK_EX, layout);
+                    new_code
+                }
             } else {
                 code
             };
+            println!(
+                "keyup new code {:?} {:?} {:?}",
+                code,
+                scancode,
+                get_win_key(code, scancode)
+            );
             sim_keyboard_event(KEYEVENTF_KEYUP, code.try_into().unwrap(), 0)
         }
         EventType::ButtonPress(button) => match button {
