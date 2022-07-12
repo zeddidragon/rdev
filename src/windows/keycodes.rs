@@ -43,6 +43,35 @@ macro_rules! decl_keycodes {
                 _ => Key::Unknown(scancode.into())
             }
         }
+
+        pub fn get_win_key(keycode: u32, scancode: u32) -> Key{
+            let key = key_from_code(keycode);
+            let scancode_key = key_from_scancode(scancode);
+
+            if key == Key::AltGr || key == Key::KpDivide || key == Key::ControlRight {
+                // note: alt and altgr have same scancode.
+                // slash and divide.
+                // left control and right control .
+                key
+            } else if scancode_key != Key::Unknown(scancode) {
+                // note: numpad should use scancode directly,
+                scancode_key
+            } else {
+                key
+            }
+        }
+
+        pub fn get_win_codes(key: Key) -> (u32, u32){
+            let keycode = code_from_key(key).unwrap();
+            let key = if key == Key::Unknown(keycode){
+                key_from_code(keycode)
+            }else{
+                key
+            };
+            let scancode = scancode_from_key(key).unwrap();
+
+            (keycode, scancode)
+        }
     };
 }
 
@@ -56,7 +85,7 @@ decl_keycodes! {
     Backspace, 0x08, 14,
     CapsLock, 20, 58,
     ControlLeft, 162, 29,
-    ControlRight, 163, 29,
+    ControlRight, 163, 0,
     Delete, 46, 0,
     UpArrow, 38, 0,
     DownArrow, 40, 0,

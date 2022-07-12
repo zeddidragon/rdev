@@ -240,11 +240,11 @@ pub use crate::linux::{key_from_scancode, Keyboard};
 #[cfg(target_os = "windows")]
 use crate::windows::{display_size as _display_size, listen as _listen, simulate as _simulate};
 #[cfg(target_os = "windows")]
-pub use crate::windows::{key_from_scancode, Keyboard};
+pub use crate::windows::{get_win_codes, get_win_key, key_from_scancode, Keyboard};
 
-pub use crate::linux::scancode_from_key as linux_scancode_from_key;
-pub use crate::macos::scancode_from_key as macos_scancode_from_key;
-pub use crate::windows::scancode_from_key as win_scancode_from_key;
+pub use crate::linux::code_from_key as linux_keycode_from_key;
+pub use crate::macos::code_from_key as macos_keycode_from_key;
+pub use crate::windows::code_from_key as win_keycode_from_key;
 
 /// Listening to global events. Caveat: On MacOS, you require the listen
 /// loop needs to be the primary app (no fork before) and need to have accessibility

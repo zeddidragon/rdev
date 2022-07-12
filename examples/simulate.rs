@@ -14,15 +14,14 @@ fn send(event_type: &EventType) {
 }
 
 fn main() {
-    send(&EventType::KeyPress(Key::KeyS));
-    send(&EventType::KeyRelease(Key::KeyS));
+    // Windows: LeftBracket
+    // scancode 26 => [
+    // in us: [
+    // in fr: ^(dead key)
 
-    send(&EventType::MouseMove { x: 0.0, y: 0.0 });
-    send(&EventType::MouseMove { x: 400.0, y: 400.0 });
-    send(&EventType::ButtonPress(Button::Left));
-    send(&EventType::ButtonRelease(Button::Right));
-    send(&EventType::Wheel {
-        delta_x: 0,
-        delta_y: 1,
-    });
+    send(&EventType::KeyPress(Key::Unknown(219)));
+    send(&EventType::KeyRelease(Key::Unknown(219)));
+
+    send(&EventType::KeyPress(Key::LeftBracket));
+    send(&EventType::KeyRelease(Key::LeftBracket));
 }

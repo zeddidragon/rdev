@@ -1,4 +1,6 @@
 use rdev::{listen, Event, EventType::*, Key as RdevKey};
+#[cfg(target_os = "windows")]
+use rdev::{get_win_codes, get_win_key};
 use std::collections::HashMap;
 use std::sync::Mutex;
 
@@ -46,24 +48,11 @@ fn main() {
             _ => return,
         };
 
-        // todo: clear key
         #[cfg(target_os = "windows")]
-        let scancode_key = rdev::key_from_scancode(evt.scan_code);
+        let key = get_win_key(evt.code.into(), evt.scan_code);
         #[cfg(target_os = "windows")]
-        let key: RdevKey = if key == RdevKey::AltGr || key == RdevKey::KpDivide {
-            // note: alt and altgr have same scancode.
-            // slash and divide have same scancode.
-            key
-        } else if scancode_key != RdevKey::Unknown(evt.scan_code) {
-            // note: numpad should use scancode directly,
-            dbg!(scancode_key);
-            rdev::key_from_scancode(evt.scan_code)
-        } else {
-            key
-        };
+        dbg!(get_win_codes(key));
 
-        // todo: up down left right in numpad
-        // #[cfg(target_os = "linux")]
         dbg!(key);
         println!("--------------");
     };
