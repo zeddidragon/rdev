@@ -6,11 +6,14 @@ macro_rules! decl_keycodes {
         //TODO: make const when rust lang issue #49146 is fixed
         pub fn code_from_key(key: Key) -> Option<u32> {
             match key {
+                // note: There is no KpReturn key in Windows
+                // Linux->Windows: Enter
+                Key::KpReturn => Some(13),
                 $(
                     Key::$key => Some($code),
                 )*
                 Key::Unknown(code) => Some(code.try_into().ok()?),
-                _ => None,
+                _ => Some(0),
             }
         }
 
@@ -106,7 +109,7 @@ decl_keycodes! {
     F11, 122, 87,
     F12, 123, 88,
     Home, 36, 0,
-    MetaLeft, 91, 91,
+    MetaLeft, 91, 0,
     PageDown, 34, 0,
     PageUp, 33, 0,
     Return, 13, 28,
