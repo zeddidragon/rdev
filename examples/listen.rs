@@ -1,6 +1,6 @@
-use rdev::{listen, Event, EventType::*, Key as RdevKey};
 #[cfg(target_os = "windows")]
 use rdev::{get_win_codes, get_win_key};
+use rdev::{listen, Event, EventType::*, Key as RdevKey};
 use std::collections::HashMap;
 use std::sync::Mutex;
 
@@ -50,10 +50,17 @@ fn main() {
 
         #[cfg(target_os = "windows")]
         let key = get_win_key(evt.code.into(), evt.scan_code);
-        #[cfg(target_os = "windows")]
-        dbg!(get_win_codes(key));
 
-        dbg!(key);
+        let linux_keycode = rdev::linux_keycode_from_key(key).unwrap();
+        let windwos_keycode = rdev::win_keycode_from_key(key).unwrap();
+        let macos_keycode = rdev::macos_keycode_from_key(key).unwrap();
+        if linux_keycode == 0 || windwos_keycode == 0 || macos_keycode == 0 {
+            println!("[!] Error ---!!!---{:?}", key);
+        }
+        println!("Linux keycode {:?}", linux_keycode);
+        println!("Windows keycode {:?}", windwos_keycode);
+        println!("Mac OS keycode {:?}", macos_keycode);
+
         println!("--------------");
     };
     if let Err(error) = rdev::listen(func) {
