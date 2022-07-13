@@ -94,12 +94,12 @@ pub fn simulate(event_type: &EventType) -> Result<(), SimulateError> {
             } else {
                 code
             };
-            println!(
-                "keydown new code {:?} {:?} {:?}",
-                code,
-                scancode,
-                get_win_key(code, scancode)
-            );
+            // println!(
+            //     "keydown new code {:?} {:?} {:?}",
+            //     code,
+            //     scancode,
+            //     get_win_key(code, scancode)
+            // );
             sim_keyboard_event(KEYEVENTF_KEYDOWN, code.try_into().unwrap(), 0)
         }
         EventType::KeyRelease(key) => {
@@ -119,12 +119,12 @@ pub fn simulate(event_type: &EventType) -> Result<(), SimulateError> {
             } else {
                 code
             };
-            println!(
-                "keyup new code {:?} {:?} {:?}",
-                code,
-                scancode,
-                get_win_key(code, scancode)
-            );
+            // println!(
+            //     "keyup new code {:?} {:?} {:?}",
+            //     code,
+            //     scancode,
+            //     get_win_key(code, scancode)
+            // );
             sim_keyboard_event(KEYEVENTF_KEYUP, code.try_into().unwrap(), 0)
         }
         EventType::ButtonPress(button) => match button {

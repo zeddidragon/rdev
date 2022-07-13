@@ -155,7 +155,7 @@ impl Keyboard {
         if !keyboard.is_null() {
             CFRelease(keyboard);
         }
-        //println!("{:?}", now.elapsed());
+        // println!("{:?}", now.elapsed());
 
         if length == 0 {
             return None;
