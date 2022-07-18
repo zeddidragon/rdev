@@ -15,11 +15,11 @@ unsafe fn convert_native_with_source(
     match event_type {
         EventType::KeyPress(key) => {
             let code = code_from_key(*key)?;
-            CGEvent::new_keyboard_event(source, code, true).ok()
+            CGEvent::new_keyboard_event(source, code as _, true).ok()
         }
         EventType::KeyRelease(key) => {
             let code = code_from_key(*key)?;
-            CGEvent::new_keyboard_event(source, code, false).ok()
+            CGEvent::new_keyboard_event(source, code as _, false).ok()
         }
         EventType::ButtonPress(button) => {
             let point = get_current_mouse_location()?;
