@@ -38,6 +38,7 @@ macro_rules! decl_keycodes {
         }
 
         pub fn key_from_scancode(scancode: u32) -> Key{
+            #[allow(unreachable_patterns)]
             match scancode {
                 0 => Key::Unknown(0),
                 $(

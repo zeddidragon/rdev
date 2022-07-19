@@ -1,6 +1,6 @@
 #[cfg(target_os = "windows")]
-use rdev::{get_win_codes, get_win_key};
-use rdev::{listen, Event, EventType::*, Key as RdevKey};
+use rdev::{get_win_key};
+use rdev::{Event, EventType::*, Key as RdevKey};
 use std::collections::HashMap;
 use std::sync::Mutex;
 
@@ -27,7 +27,7 @@ fn main() {
     std::env::set_var("KEYBOARD_ONLY", "y");
 
     let func = move |evt: Event| {
-        let (key, down) = match evt.event_type {
+        let (_key, _down) = match evt.event_type {
             KeyPress(k) => {
                 if MUTEX_SPECIAL_KEYS.lock().unwrap().contains_key(&k) {
                     if *MUTEX_SPECIAL_KEYS.lock().unwrap().get(&k).unwrap() {
@@ -49,13 +49,13 @@ fn main() {
         };
 
         #[cfg(target_os = "windows")]
-        let key = get_win_key(evt.code.into(), evt.scan_code);
+        let _key = get_win_key(evt.code.into(), evt.scan_code);
 
-        let linux_keycode = rdev::linux_keycode_from_key(key).unwrap();
-        let windwos_keycode = rdev::win_keycode_from_key(key).unwrap();
-        let macos_keycode = rdev::macos_keycode_from_key(key).unwrap();
+        let linux_keycode = rdev::linux_keycode_from_key(_key).unwrap();
+        let windwos_keycode = rdev::win_keycode_from_key(_key).unwrap();
+        let macos_keycode = rdev::macos_keycode_from_key(_key).unwrap();
         if linux_keycode == 0 || windwos_keycode == 0 || macos_keycode == 0 {
-            println!("[!] Error ---!!!---{:?}", key);
+            println!("[!] Error ---!!!---{:?}", _key);
         }
         println!("Linux keycode {:?}", linux_keycode);
         println!("Windows keycode {:?}", windwos_keycode);

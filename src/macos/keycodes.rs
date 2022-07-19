@@ -17,6 +17,7 @@ macro_rules! decl_keycodes {
         }
 
         //TODO: make const when rust lang issue #49146 is fixed
+        #[allow(dead_code)]
         pub fn key_from_code(code: u32) -> Key {
             match code {
                 $(
@@ -26,14 +27,16 @@ macro_rules! decl_keycodes {
             }
         }
 
+        #[allow(dead_code)]
         pub fn scancode_from_key(key:Key) -> Option<u32> {
             // keycode
             code_from_key(key)
         }
 
+        #[allow(dead_code)]
         pub fn key_from_scancode(scancode: u32) -> Key {
             // keycode
-            key_from_scancode(scancode)
+            key_from_code(scancode)
         }
     };
 }

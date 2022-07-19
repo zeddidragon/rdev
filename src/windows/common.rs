@@ -16,7 +16,9 @@ use winapi::um::winuser::{
     WM_MOUSEHWHEEL, WM_MOUSEMOVE, WM_MOUSEWHEEL, WM_RBUTTONDOWN, WM_RBUTTONUP, WM_SYSKEYDOWN,
     WM_SYSKEYUP, WM_XBUTTONDOWN, WM_XBUTTONUP,
 };
+#[allow(dead_code)]
 pub const TRUE: i32 = 1;
+#[allow(dead_code)]
 pub const FALSE: i32 = 0;
 
 pub static mut HOOK: HHOOK = null_mut();
