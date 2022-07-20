@@ -323,7 +323,6 @@ pub fn display_size() -> Result<(u64, u64), DisplayError> {
     _display_size()
 }
 
-#[cfg(feature = "unstable_grab")]
 #[cfg(target_os = "linux")]
 pub use crate::linux::grab as _grab;
 #[cfg(feature = "unstable_grab")]
