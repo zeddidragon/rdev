@@ -17,6 +17,7 @@ license = "MIT"
 serde = {version = "1.0", features = ["derive"], optional=true}
 lazy_static = "1.4"
 enum-map = "2.4.0"
+widestring = "1.0.2"
 
 [features]
 serialize = ["serde"]

@@ -39,11 +39,10 @@ impl Keyboard {
         let code = get_code(lpdata);
         let scan_code = get_scan_code(lpdata);
 
-        // self.set_global_state()?; // ignore all modifieres for name
+        self.set_global_state()?;
         self.get_code_name(code, scan_code)
     }
 
-    #[allow(dead_code)]
     pub(crate) unsafe fn set_global_state(&mut self) -> Option<()> {
         let mut state = [0_u8; 256];
         let state_ptr = state.as_mut_ptr();
@@ -71,11 +70,7 @@ impl Keyboard {
         Some(())
     }
 
-    /// # Safety
-    ///
-    /// This function should not be called before the horsemen are ready.
-    pub unsafe fn get_code_name(&mut self, code: UINT, scan_code: UINT) -> Option<String> {
-        // todo: Affects input from other apps
+    pub(crate) unsafe fn get_code_name(&mut self, code: UINT, scan_code: UINT) -> Option<String> {
         let current_window_thread_id = GetWindowThreadProcessId(GetForegroundWindow(), null_mut());
         let state_ptr = self.last_state.as_mut_ptr();
         const BUF_LEN: i32 = 32;
@@ -84,14 +79,15 @@ impl Keyboard {
         let layout = GetKeyboardLayout(current_window_thread_id);
         let len = ToUnicodeEx(code, scan_code, state_ptr, buff_ptr, 8 - 1, 0, layout);
 
-        let is_dead = false;
+        let mut is_dead = false;
         let result = match len {
             0 => None,
             -1 => {
-                ToUnicodeEx(code, scan_code, state_ptr, buff_ptr, 8 - 1, 0, layout);
-                String::from_utf16(&buff[..1 as _]).ok()
+                is_dead = true;
+                self.clear_keyboard_buffer(code, scan_code, layout);
+                None
             }
-            len if len > 0 => String::from_utf16(&buff[..1 as _]).ok(),
+            len if len > 0 => String::from_utf16(&buff[..len as usize]).ok(),
             _ => None,
         };
 
@@ -117,9 +113,7 @@ impl Keyboard {
         result
     }
 
-    #[allow(dead_code)]
     unsafe fn clear_keyboard_buffer(&self, code: UINT, scan_code: UINT, layout: HKL) {
-        #[allow(dead_code)]
         const BUF_LEN: i32 = 32;
         let mut buff = [0_u16; BUF_LEN as usize];
         let buff_ptr = buff.as_mut_ptr();
