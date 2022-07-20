@@ -1,6 +1,10 @@
 #[cfg(target_os = "windows")]
-use rdev::{get_win_key};
-use rdev::{Event, EventType::{*, self}, Key as RdevKey};
+use rdev::get_win_key;
+use rdev::{
+    Event,
+    EventType::{self, *},
+    Key as RdevKey,
+};
 use std::collections::HashMap;
 use std::sync::Mutex;
 
@@ -22,16 +26,15 @@ lazy_static::lazy_static! {
 }
 
 fn main() {
-    // grap or listen
     // This will block.
     std::env::set_var("KEYBOARD_ONLY", "y");
 
-    let func = move |evt: Event| -> Option<Event> {
+    let func = move |evt: Event| {
         let (_key, _down) = match evt.event_type {
             KeyPress(k) => {
                 if MUTEX_SPECIAL_KEYS.lock().unwrap().contains_key(&k) {
                     if *MUTEX_SPECIAL_KEYS.lock().unwrap().get(&k).unwrap() {
-                        return None;
+                        return;
                     }
                     MUTEX_SPECIAL_KEYS.lock().unwrap().insert(k, true);
                 }
@@ -45,7 +48,7 @@ fn main() {
                 println!("keyup {:?} {:?} {:?}", k, evt.code, evt.scan_code);
                 (k, 0)
             }
-            _ => return None,
+            _ => return,
         };
 
         #[cfg(target_os = "windows")]
@@ -66,16 +69,9 @@ fn main() {
         println!("Mac OS keycode {:?}", macos_keycode);
 
         println!("--------------");
-
-        match evt.event_type {
-            EventType::KeyPress(RdevKey::Tab) => {
-                println!("Cancelling Tab !");
-                None
-            }
-            _ => Some(evt),
-        }
     };
-    if let Err(error) = rdev::grab(func) { // rdev::listen
+    if let Err(error) = rdev::listen(func) {
+        // rdev::listen
         dbg!("{:?}", error);
     }
 }
