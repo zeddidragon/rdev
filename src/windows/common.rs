@@ -52,54 +52,57 @@ pub unsafe fn get_button_code(lpdata: LPARAM) -> WORD {
 
 pub unsafe fn convert(param: WPARAM, lpdata: LPARAM) -> (Option<EventType>, u16) {
     let mut code = 0;
-    (match param.try_into() {
-        Ok(WM_KEYDOWN) | Ok(WM_SYSKEYDOWN) => {
-            code = get_code(lpdata) as u16;
-            let key = key_from_code(code.into());
-            Some(EventType::KeyPress(key))
-        }
-        Ok(WM_KEYUP) | Ok(WM_SYSKEYUP) => {
-            code = get_code(lpdata) as u16;
-            let key = key_from_code(code.into());
-            Some(EventType::KeyRelease(key))
-        }
-        Ok(WM_LBUTTONDOWN) => Some(EventType::ButtonPress(Button::Left)),
-        Ok(WM_LBUTTONUP) => Some(EventType::ButtonRelease(Button::Left)),
-        Ok(WM_MBUTTONDOWN) => Some(EventType::ButtonPress(Button::Middle)),
-        Ok(WM_MBUTTONUP) => Some(EventType::ButtonRelease(Button::Middle)),
-        Ok(WM_RBUTTONDOWN) => Some(EventType::ButtonPress(Button::Right)),
-        Ok(WM_RBUTTONUP) => Some(EventType::ButtonRelease(Button::Right)),
-        Ok(WM_XBUTTONDOWN) => {
-            let code = get_button_code(lpdata) as u8;
-            Some(EventType::ButtonPress(Button::Unknown(code)))
-        }
-        Ok(WM_XBUTTONUP) => {
-            let code = get_button_code(lpdata) as u8;
-            Some(EventType::ButtonRelease(Button::Unknown(code)))
-        }
-        Ok(WM_MOUSEMOVE) => {
-            let (x, y) = get_point(lpdata);
-            Some(EventType::MouseMove {
-                x: x as f64,
-                y: y as f64,
-            })
-        }
-        Ok(WM_MOUSEWHEEL) => {
-            let delta = get_delta(lpdata) as c_short;
-            Some(EventType::Wheel {
-                delta_x: 0,
-                delta_y: (delta / WHEEL_DELTA) as i64,
-            })
-        }
-        Ok(WM_MOUSEHWHEEL) => {
-            let delta = get_delta(lpdata) as c_short;
-            Some(EventType::Wheel {
-                delta_x: (delta / WHEEL_DELTA) as i64,
-                delta_y: 0,
-            })
-        }
-        _ => None,
-    }, code)
+    (
+        match param.try_into() {
+            Ok(WM_KEYDOWN) | Ok(WM_SYSKEYDOWN) => {
+                code = get_code(lpdata) as u16;
+                let key = key_from_code(code.into());
+                Some(EventType::KeyPress(key))
+            }
+            Ok(WM_KEYUP) | Ok(WM_SYSKEYUP) => {
+                code = get_code(lpdata) as u16;
+                let key = key_from_code(code.into());
+                Some(EventType::KeyRelease(key))
+            }
+            Ok(WM_LBUTTONDOWN) => Some(EventType::ButtonPress(Button::Left)),
+            Ok(WM_LBUTTONUP) => Some(EventType::ButtonRelease(Button::Left)),
+            Ok(WM_MBUTTONDOWN) => Some(EventType::ButtonPress(Button::Middle)),
+            Ok(WM_MBUTTONUP) => Some(EventType::ButtonRelease(Button::Middle)),
+            Ok(WM_RBUTTONDOWN) => Some(EventType::ButtonPress(Button::Right)),
+            Ok(WM_RBUTTONUP) => Some(EventType::ButtonRelease(Button::Right)),
+            Ok(WM_XBUTTONDOWN) => {
+                let code = get_button_code(lpdata) as u8;
+                Some(EventType::ButtonPress(Button::Unknown(code)))
+            }
+            Ok(WM_XBUTTONUP) => {
+                let code = get_button_code(lpdata) as u8;
+                Some(EventType::ButtonRelease(Button::Unknown(code)))
+            }
+            Ok(WM_MOUSEMOVE) => {
+                let (x, y) = get_point(lpdata);
+                Some(EventType::MouseMove {
+                    x: x as f64,
+                    y: y as f64,
+                })
+            }
+            Ok(WM_MOUSEWHEEL) => {
+                let delta = get_delta(lpdata) as c_short;
+                Some(EventType::Wheel {
+                    delta_x: 0,
+                    delta_y: (delta / WHEEL_DELTA) as i64,
+                })
+            }
+            Ok(WM_MOUSEHWHEEL) => {
+                let delta = get_delta(lpdata) as c_short;
+                Some(EventType::Wheel {
+                    delta_x: (delta / WHEEL_DELTA) as i64,
+                    delta_y: 0,
+                })
+            }
+            _ => None,
+        },
+        code,
+    )
 }
 
 type RawCallback = unsafe extern "system" fn(code: c_int, param: WPARAM, lpdata: LPARAM) -> LRESULT;

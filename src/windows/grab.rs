@@ -1,6 +1,7 @@
 use crate::rdev::{Event, EventType, GrabError};
-use crate::windows::common::{convert, get_scan_code, set_key_hook, set_mouse_hook, HookError, HOOK, KEYBOARD};
-use std::convert::TryInto;
+use crate::windows::common::{
+    convert, get_scan_code, set_key_hook, set_mouse_hook, HookError, HOOK, KEYBOARD,
+};
 use std::ptr::null_mut;
 use std::time::SystemTime;
 use winapi::um::winuser::{CallNextHookEx, GetMessageA, HC_ACTION};
@@ -9,7 +10,7 @@ static mut GLOBAL_CALLBACK: Option<Box<dyn FnMut(Event) -> Option<Event>>> = Non
 
 unsafe extern "system" fn raw_callback(code: i32, param: usize, lpdata: isize) -> isize {
     if code == HC_ACTION {
-        let (opt, new_code) = convert(param, lpdata);
+        let (opt, code) = convert(param, lpdata);
         if let Some(event_type) = opt {
             let name = match &event_type {
                 EventType::KeyPress(_key) => match (*KEYBOARD).lock() {
@@ -22,7 +23,7 @@ unsafe extern "system" fn raw_callback(code: i32, param: usize, lpdata: isize) -
                 event_type,
                 time: SystemTime::now(),
                 name,
-                code: code.try_into().unwrap(),
+                code,
                 scan_code: get_scan_code(lpdata),
             };
             if let Some(callback) = &mut GLOBAL_CALLBACK {
@@ -54,7 +55,9 @@ where
     unsafe {
         GLOBAL_CALLBACK = Some(Box::new(callback));
         set_key_hook(raw_callback)?;
-        set_mouse_hook(raw_callback)?;
+        if !crate::keyboard_only() {
+            set_mouse_hook(raw_callback)?;
+        }
 
         GetMessageA(null_mut(), null_mut(), 0, 0);
     }

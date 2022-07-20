@@ -1,6 +1,6 @@
 #[cfg(target_os = "windows")]
 use rdev::{get_win_key};
-use rdev::{Event, EventType::*, Key as RdevKey};
+use rdev::{Event, EventType::{*, self}, Key as RdevKey};
 use std::collections::HashMap;
 use std::sync::Mutex;
 
@@ -8,7 +8,6 @@ lazy_static::lazy_static! {
     static ref MUTEX_SPECIAL_KEYS: Mutex<HashMap<RdevKey, bool>> = {
         let mut m = HashMap::new();
         // m.insert(RdevKey::PrintScreen, false); // 无反应
-
         m.insert(RdevKey::ShiftLeft, false);
         m.insert(RdevKey::ShiftRight, false);
 
@@ -23,15 +22,16 @@ lazy_static::lazy_static! {
 }
 
 fn main() {
+    // grap or listen
     // This will block.
     std::env::set_var("KEYBOARD_ONLY", "y");
 
-    let func = move |evt: Event| {
+    let func = move |evt: Event| -> Option<Event> {
         let (_key, _down) = match evt.event_type {
             KeyPress(k) => {
                 if MUTEX_SPECIAL_KEYS.lock().unwrap().contains_key(&k) {
                     if *MUTEX_SPECIAL_KEYS.lock().unwrap().get(&k).unwrap() {
-                        return;
+                        return None;
                     }
                     MUTEX_SPECIAL_KEYS.lock().unwrap().insert(k, true);
                 }
@@ -45,13 +45,17 @@ fn main() {
                 println!("keyup {:?} {:?} {:?}", k, evt.code, evt.scan_code);
                 (k, 0)
             }
-            _ => return,
+            _ => return None,
         };
 
         #[cfg(target_os = "windows")]
         let _key = get_win_key(evt.code.into(), evt.scan_code);
+        #[cfg(target_os = "windows")]
+        println!("{:?}", _key);
 
         let linux_keycode = rdev::linux_keycode_from_key(_key).unwrap();
+        // Mac/Linux Numpad -> Windows ArrawKey
+        // https://github.com/asur4s/rustdesk/blob/fe9923109092827f543560a7af42dff6c3135117/src/ui/remote.rs#L968
         let windwos_keycode = rdev::win_keycode_from_key(_key).unwrap();
         let macos_keycode = rdev::macos_keycode_from_key(_key).unwrap();
         if linux_keycode == 0 || windwos_keycode == 0 || macos_keycode == 0 {
@@ -62,8 +66,16 @@ fn main() {
         println!("Mac OS keycode {:?}", macos_keycode);
 
         println!("--------------");
+
+        match evt.event_type {
+            EventType::KeyPress(RdevKey::Tab) => {
+                println!("Cancelling Tab !");
+                None
+            }
+            _ => Some(evt),
+        }
     };
-    if let Err(error) = rdev::listen(func) {
+    if let Err(error) = rdev::grab(func) { // rdev::listen
         dbg!("{:?}", error);
     }
 }
