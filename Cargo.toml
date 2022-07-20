@@ -51,9 +51,9 @@ tokio = {version = "1.5", features=["sync", "macros", "rt-multi-thread"]}
 name = "serialize"
 required-features = ["serialize"]
 
-[[example]]
-name = "grab"
-required-features = ["unstable_grab"]
+# [[example]]
+# name = "grab"
+# required-features = ["unstable_grab"]
 
 [[example]]
 name = "tokio_channel"

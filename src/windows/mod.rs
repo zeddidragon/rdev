@@ -5,7 +5,6 @@ mod common;
 #[cfg(target_os = "windows")]
 mod display;
 #[cfg(target_os = "windows")]
-#[cfg(feature = "unstable_grab")]
 mod grab;
 #[cfg(target_os = "windows")]
 mod keyboard;
@@ -20,7 +19,6 @@ pub use crate::windows::common::*;
 #[cfg(target_os = "windows")]
 pub use crate::windows::display::display_size;
 #[cfg(target_os = "windows")]
-#[cfg(feature = "unstable_grab")]
 pub use crate::windows::grab::grab;
 #[cfg(target_os = "windows")]
 pub use crate::windows::keyboard::Keyboard;
