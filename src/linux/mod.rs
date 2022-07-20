@@ -7,7 +7,6 @@ mod common;
 #[cfg(target_os = "linux")]
 mod display;
 #[cfg(target_os = "linux")]
-#[cfg(feature = "unstable_grab")]
 mod grab;
 #[cfg(target_os = "linux")]
 mod keyboard;
@@ -20,7 +19,6 @@ mod keycodes;
 #[cfg(target_os = "linux")]
 pub use crate::linux::display::display_size;
 #[cfg(target_os = "linux")]
-#[cfg(feature = "unstable_grab")]
 pub use crate::linux::grab::grab;
 #[cfg(target_os = "linux")]
 pub use crate::linux::keyboard::Keyboard;
