@@ -78,7 +78,6 @@ impl Keyboard {
         let buff_ptr = buff.as_mut_ptr();
         let layout = GetKeyboardLayout(current_window_thread_id);
         let len = ToUnicodeEx(code, scan_code, state_ptr, buff_ptr, 8 - 1, 0, layout);
-
         let mut is_dead = false;
         let result = match len {
             0 => None,
@@ -109,6 +108,11 @@ impl Keyboard {
             self.last_code = code;
             self.last_scan_code = scan_code;
             self.last_is_dead = is_dead;
+        }
+
+        // C0 controls
+        if len == 1 && matches!( String::from_utf16(&buff[..len as usize]).unwrap().chars().next().unwrap(), '\u{1}'..='\u{1f}') {
+            return Some("".to_string());
         }
         result
     }

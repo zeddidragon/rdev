@@ -58,9 +58,6 @@ fn main() {
         // https://github.com/asur4s/rustdesk/blob/fe9923109092827f543560a7af42dff6c3135117/src/ui/remote.rs#L968
         let windwos_keycode = rdev::win_keycode_from_key(_key).unwrap();
         let macos_keycode = rdev::macos_keycode_from_key(_key).unwrap();
-        if linux_keycode == 0 || windwos_keycode == 0 || macos_keycode == 0 {
-            println!("[!] Error ---!!!---{:?}", _key);
-        }
         println!("Linux keycode {:?}", linux_keycode);
         println!("Windows keycode {:?}", windwos_keycode);
         println!("Mac OS keycode {:?}", macos_keycode);

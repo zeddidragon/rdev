@@ -1,10 +1,6 @@
 #[cfg(target_os = "windows")]
 use rdev::get_win_key;
-use rdev::{
-    Event,
-    EventType::{self, *},
-    Key as RdevKey,
-};
+use rdev::{Event, EventType::*, Key as RdevKey};
 use std::collections::HashMap;
 use std::sync::Mutex;
 
@@ -38,7 +34,9 @@ fn main() {
                     }
                     MUTEX_SPECIAL_KEYS.lock().unwrap().insert(k, true);
                 }
-                println!("keydown {:?} {:?} {:?}", k, evt.code, evt.scan_code);
+                let s = evt.name.unwrap_or_default();
+                println!("keydown {:?} {:?} {:?} {:?}", k, evt.code, evt.scan_code, s);
+
                 (k, 1)
             }
             KeyRelease(k) => {
@@ -61,9 +59,6 @@ fn main() {
         // https://github.com/asur4s/rustdesk/blob/fe9923109092827f543560a7af42dff6c3135117/src/ui/remote.rs#L968
         let windwos_keycode = rdev::win_keycode_from_key(_key).unwrap();
         let macos_keycode = rdev::macos_keycode_from_key(_key).unwrap();
-        if linux_keycode == 0 || windwos_keycode == 0 || macos_keycode == 0 {
-            println!("[!] Error ---!!!---{:?}", _key);
-        }
         println!("Linux keycode {:?}", linux_keycode);
         println!("Windows keycode {:?}", windwos_keycode);
         println!("Mac OS keycode {:?}", macos_keycode);
