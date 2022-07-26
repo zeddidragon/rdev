@@ -152,9 +152,9 @@ impl Keyboard {
         }
     }
 
-   pub(crate) fn set_raw_state(&mut self, state: u16) {
-       self.state.raw = state;
-   }
+    pub(crate) fn set_raw_state(&mut self, state: u16) {
+        self.state.raw = state;
+    }
 
     pub(crate) unsafe fn name_from_code(
         &mut self,
@@ -194,6 +194,9 @@ impl Keyboard {
         // https://stackoverflow.com/questions/18246848/get-utf-8-input-with-x11-display#
         // -----------------------------------------------------------------
         xlib::XFilterEvent(&mut event, 0);
+        dbg!(*self.keysym);
+
+        
 
         let ret = xlib::Xutf8LookupString(
             *self.xic,
@@ -207,7 +210,18 @@ impl Keyboard {
             return None;
         }
 
+        
+        // let value = *self.keysym as u64;
+        // let ptr = unsafe { xlib::XKeysymToString(value) };
+        // if ptr.is_null() {
+        //     println!("Error");
+        // }
+        // let name = unsafe { std::ffi::CStr::from_ptr(ptr).to_str() };
+        // println!("{:?}", name);
+
         let len = buf.iter().position(|ch| ch == &0).unwrap_or(BUF_LEN);
+        // dbg!(buf);
+        // dbg!(len);
         String::from_utf8(buf[..len].to_vec()).ok()
     }
 }

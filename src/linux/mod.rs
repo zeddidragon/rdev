@@ -25,5 +25,5 @@ pub use crate::linux::keyboard::Keyboard;
 #[cfg(target_os = "linux")]
 pub use crate::linux::listen::listen;
 #[cfg(target_os = "linux")]
-pub use crate::linux::simulate::simulate;
+pub use crate::linux::simulate::{simulate, simulate_char};
 pub use crate::linux::keycodes::*;
