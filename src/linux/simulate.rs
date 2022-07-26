@@ -90,6 +90,7 @@ unsafe fn send_native_char(chr: char, pressed: bool, display: *mut xlib::Display
     // unuse keycode: F24 -> 194
     let keycode: u32 = 194;
 
+    // char to keysym
     let ordinal: u32 = chr.into();
     let mut keysym = if ordinal < 0x100 {
         ordinal

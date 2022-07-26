@@ -13,7 +13,7 @@ fn send(event_type: &EventType) {
     thread::sleep(delay);
 }
 
-fn send_char(chr: char, pressed: bool){
+fn send_char(chr: char, pressed: bool) {
     let delay = time::Duration::from_millis(20);
     match simulate_char(chr, pressed) {
         Ok(()) => (),

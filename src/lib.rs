@@ -240,7 +240,7 @@ pub use crate::linux::{key_from_scancode, Keyboard, simulate_char};
 #[cfg(target_os = "windows")]
 use crate::windows::{display_size as _display_size, listen as _listen, simulate as _simulate};
 #[cfg(target_os = "windows")]
-pub use crate::windows::{key_from_scancode, Keyboard};
+pub use crate::windows::{key_from_scancode, Keyboard, simulate_char};
 
 pub use crate::linux::code_from_key as linux_keycode_from_key;
 pub use crate::macos::code_from_key as macos_keycode_from_key;
