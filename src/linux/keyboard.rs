@@ -9,6 +9,7 @@ use x11::xlib;
 #[derive(Debug)]
 struct State {
     alt: bool,
+    alt_gr: bool,
     ctrl: bool,
     caps_lock: bool,
     shift: bool,
@@ -25,6 +26,7 @@ impl State {
     fn new() -> State {
         State {
             alt: false,
+            alt_gr: false,
             ctrl: false,
             caps_lock: false,
             meta: false,
@@ -35,11 +37,12 @@ impl State {
 
     fn value(&self) -> c_uint {
         // ignore all modiferes for name
-        (self.raw as c_uint) & !0xFF
-        /*
         let mut res: c_uint = 0;
         if self.alt {
             res += xlib::Mod1Mask;
+        }
+        if self.alt_gr {
+            res += xlib::Mod5Mask;
         }
         if self.ctrl {
             res += xlib::ControlMask;
@@ -54,7 +57,6 @@ impl State {
             res += xlib::ShiftMask;
         }
         res
-        */
     }
 }
 
@@ -80,15 +82,18 @@ impl Drop for Keyboard {
 impl Keyboard {
     pub fn new() -> Option<Keyboard> {
         unsafe {
+            let dpy = xlib::XOpenDisplay(null());
+            if dpy.is_null() {
+                return None;
+            }
+
+            let string = CString::new("").expect("Can't creat CString");
+            libc::setlocale(libc::LC_ALL, string.as_ptr());
             // https://stackoverflow.com/questions/18246848/get-utf-8-input-with-x11-display#
             let string = CString::new("@im=none").expect("Can't creat CString");
             let ret = xlib::XSetLocaleModifiers(string.as_ptr());
             NonNull::new(ret)?;
 
-            let dpy = xlib::XOpenDisplay(null());
-            if dpy.is_null() {
-                return None;
-            }
             let xim = xlib::XOpenIM(dpy, null_mut(), null_mut(), null_mut());
             NonNull::new(xim)?;
 
@@ -131,14 +136,16 @@ impl Keyboard {
 
             let xic = xlib::XCreateIC(
                 xim,
-                window_client.as_ptr(),
-                window,
                 input_style.as_ptr(),
                 style,
+                window_client.as_ptr(),
+                window,
                 null::<c_void>(),
             );
             NonNull::new(xic)?;
+
             xlib::XSetICFocus(xic);
+
             Some(Keyboard {
                 xim: Box::new(xim),
                 xic: Box::new(xic),
@@ -194,9 +201,6 @@ impl Keyboard {
         // https://stackoverflow.com/questions/18246848/get-utf-8-input-with-x11-display#
         // -----------------------------------------------------------------
         xlib::XFilterEvent(&mut event, 0);
-        dbg!(*self.keysym);
-
-        
 
         let ret = xlib::Xutf8LookupString(
             *self.xic,
@@ -210,18 +214,22 @@ impl Keyboard {
             return None;
         }
 
-        
-        // let value = *self.keysym as u64;
-        // let ptr = unsafe { xlib::XKeysymToString(value) };
-        // if ptr.is_null() {
-        //     println!("Error");
-        // }
-        // let name = unsafe { std::ffi::CStr::from_ptr(ptr).to_str() };
-        // println!("{:?}", name);
-
         let len = buf.iter().position(|ch| ch == &0).unwrap_or(BUF_LEN);
-        // dbg!(buf);
-        // dbg!(len);
+
+        // C0 controls
+        if len == 1
+            && matches!(
+                String::from_utf8(buf[..len].to_vec())
+                    .unwrap()
+                    .chars()
+                    .next()
+                    .unwrap(),
+                '\u{1}'..='\u{1f}'
+            )
+        {
+            return None;
+        }
+
         String::from_utf8(buf[..len].to_vec()).ok()
     }
 }
@@ -232,6 +240,14 @@ impl KeyboardState for Keyboard {
             EventType::KeyPress(key) => match key {
                 Key::ShiftLeft | Key::ShiftRight => {
                     self.state.shift = true;
+                    None
+                }
+                Key::Alt => {
+                    self.state.alt = true;
+                    None
+                }
+                Key::AltGr => {
+                    self.state.alt_gr = true;
                     None
                 }
                 Key::CapsLock => {
@@ -249,11 +265,15 @@ impl KeyboardState for Keyboard {
                     self.state.shift = false;
                     None
                 }
-                key => {
-                    let keycode = code_from_key(*key)?;
-                    let state = self.state.value();
-                    unsafe { self.name_from_code(keycode, state) }
+                Key::Alt => {
+                    self.state.alt = false;
+                    None
                 }
+                Key::AltGr => {
+                    self.state.alt_gr = false;
+                    None
+                }
+                _ => None,
             },
             _ => None,
         }
