@@ -24,7 +24,8 @@ unsafe extern "system" fn raw_callback(code: c_int, param: WPARAM, lpdata: LPARA
         let (opt, code) = convert(param, lpdata);
         if let Some(event_type) = opt {
             let name = match &event_type {
-                EventType::KeyPress(_) | EventType::KeyRelease(_) => match (*KEYBOARD).lock() {
+                // Unify Linux and Windows, get character when key is pressed.
+                EventType::KeyPress(_) => match (*KEYBOARD).lock() {
                     Ok(mut keyboard) => keyboard.get_name(lpdata),
                     Err(_) => None,
                 },

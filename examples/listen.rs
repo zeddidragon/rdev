@@ -1,4 +1,5 @@
 use enum_map::MaybeUninit;
+#[cfg(target_os = "linux")]
 use libc::{c_char, c_int, c_ulong, setlocale, LC_ALL};
 #[cfg(target_os = "windows")]
 use rdev::get_win_key;
@@ -7,6 +8,7 @@ use std::ffi::CString;
 use std::ptr::{null_mut, NonNull};
 use std::sync::Mutex;
 use std::{collections::HashMap, ptr::null};
+#[cfg(target_os = "linux")]
 use x11::xlib::{
     self, ButtonPressMask, KeyPressMask, KeyReleaseMask, StructureNotifyMask, XBufferOverflow,
     XCreateIC, XCreateSimpleWindow, XDefaultRootWindow, XFilterEvent, XIMPreeditNothing,
@@ -32,6 +34,7 @@ lazy_static::lazy_static! {
     };
 }
 
+#[cfg(target_os = "linux")]
 #[warn(dead_code)]
 fn listen_for_char() -> Option<()> {
     unsafe {
