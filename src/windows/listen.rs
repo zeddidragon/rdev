@@ -23,18 +23,10 @@ unsafe extern "system" fn raw_callback(code: c_int, param: WPARAM, lpdata: LPARA
     if code == HC_ACTION {
         let (opt, code) = convert(param, lpdata);
         if let Some(event_type) = opt {
-            let name = match &event_type {
-                // Unify Linux and Windows, get character when key is pressed.
-                EventType::KeyPress(_) => match (*KEYBOARD).lock() {
-                    Ok(mut keyboard) => keyboard.get_name(lpdata),
-                    Err(_) => None,
-                },
-                _ => None,
-            };
             let event = Event {
                 event_type,
                 time: SystemTime::now(),
-                name,
+                name: None,
                 code,
                 scan_code: get_scan_code(lpdata),
             };

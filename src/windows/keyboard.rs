@@ -1,6 +1,5 @@
 use crate::rdev::{EventType, Key, KeyboardState};
 use crate::windows::common::{get_code, get_scan_code, FALSE, TRUE};
-use crate::windows::keycodes::code_from_key;
 use std::ptr::null_mut;
 use winapi::shared::minwindef::{BYTE, HKL, LPARAM, UINT};
 use winapi::um::processthreadsapi::GetCurrentThreadId;
@@ -20,7 +19,7 @@ pub struct Keyboard {
     last_code: UINT,
     last_scan_code: UINT,
     last_state: [BYTE; 256],
-    last_is_dead: bool,
+    pub last_is_dead: bool,
 }
 
 impl Keyboard {
@@ -111,7 +110,16 @@ impl Keyboard {
         }
 
         // C0 controls
-        if len == 1 && matches!( String::from_utf16(&buff[..len as usize]).unwrap().chars().next().unwrap(), '\u{1}'..='\u{1f}') {
+        if len == 1
+            && matches!(
+                String::from_utf16(&buff[..len as usize])
+                    .unwrap()
+                    .chars()
+                    .next()
+                    .unwrap(),
+                '\u{1}'..='\u{1f}'
+            )
+        {
             return Some("".to_string());
         }
         result
@@ -150,8 +158,17 @@ impl KeyboardState for Keyboard {
                     None
                 }
                 key => {
-                    let code = code_from_key(*key)?;
-                    unsafe { self.get_code_name(code as _, 0) }
+                    let (code, scan_code) = crate::get_win_codes(*key);
+
+                    unsafe {
+                        let _control = GetKeyState(winuser::VK_CONTROL) & 0x8000_u16 as i16;
+                        if _control < 0 {
+                            self.get_code_name(code as _, scan_code)
+                        } else {
+                            self.set_global_state()?;
+                            self.get_code_name(code, scan_code)
+                        }
+                    }
                 }
             },
             EventType::KeyRelease(key) => match key {

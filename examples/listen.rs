@@ -3,7 +3,11 @@ use enum_map::MaybeUninit;
 use libc::{c_char, c_int, c_ulong, setlocale, LC_ALL};
 #[cfg(target_os = "windows")]
 use rdev::get_win_key;
-use rdev::{Event, EventType::*, Key as RdevKey};
+use rdev::{
+    Event,
+    EventType::{self, *},
+    Key as RdevKey, Keyboard, KeyboardState,
+};
 use std::ffi::CString;
 use std::ptr::{null_mut, NonNull};
 use std::sync::Mutex;
@@ -147,6 +151,7 @@ fn main() {
     // This will block.
     std::env::set_var("KEYBOARD_ONLY", "y");
 
+    let mut keyboard = Keyboard::new().unwrap();
     let func = move |evt: Event| {
         let (_key, _down) = match evt.event_type {
             KeyPress(k) => {
@@ -156,8 +161,7 @@ fn main() {
                     }
                     MUTEX_SPECIAL_KEYS.lock().unwrap().insert(k, true);
                 }
-                let s = evt.name.unwrap_or_default();
-                println!("keydown {:?} {:?} {:?} {:?}", k, evt.code, evt.scan_code, s);
+                println!("keydown {:?} {:?} {:?}", k, evt.code, evt.scan_code);
 
                 (k, 1)
             }
@@ -170,6 +174,10 @@ fn main() {
             }
             _ => return,
         };
+
+        let char_s = keyboard.add(&evt.event_type).unwrap_or_default();
+        dbg!(keyboard.last_is_dead);
+        dbg!(char_s);
 
         #[cfg(target_os = "windows")]
         let _key = get_win_key(evt.code.into(), evt.scan_code);
