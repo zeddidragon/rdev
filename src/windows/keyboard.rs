@@ -78,6 +78,7 @@ impl Keyboard {
         let layout = GetKeyboardLayout(current_window_thread_id);
         let len = ToUnicodeEx(code, scan_code, state_ptr, buff_ptr, 8 - 1, 0, layout);
         let mut is_dead = false;
+        dbg!(len);
         let result = match len {
             0 => None,
             -1 => {
@@ -162,7 +163,10 @@ impl KeyboardState for Keyboard {
 
                     unsafe {
                         let _control = GetKeyState(winuser::VK_CONTROL) & 0x8000_u16 as i16;
-                        if _control < 0 {
+                        let _altgr = GetKeyState(winuser::VK_RMENU) & 0x8000_u16 as i16;
+                        // If control is pressed, global state cannot be used, otherwise no character will be generated.
+                        // note: AltGR => ControlLeft + AltGR
+                        if _control < 0 && _altgr >= 0 {
                             self.get_code_name(code as _, scan_code)
                         } else {
                             self.set_global_state()?;
