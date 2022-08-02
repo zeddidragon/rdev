@@ -1,10 +1,11 @@
 extern crate x11;
 use crate::linux::keycodes::code_from_key;
 use crate::rdev::{EventType, Key, KeyboardState};
-use std::ffi::CString;
+use std::ffi::{CString, CStr};
 use std::os::raw::{c_char, c_int, c_uint, c_ulong, c_void};
 use std::ptr::{null, null_mut, NonNull};
 use x11::xlib;
+use x11::xlib::XKeysymToString;
 
 #[derive(Debug)]
 struct State {
@@ -66,7 +67,7 @@ pub struct Keyboard {
     pub xic: Box<xlib::XIC>,
     pub display: Box<*mut xlib::Display>,
     window: Box<xlib::Window>,
-    pub keysym: Box<c_ulong>,
+    keysym: Box<c_ulong>,
     status: Box<i32>,
     state: State,
     serial: c_ulong,
@@ -231,6 +232,16 @@ impl Keyboard {
         }
 
         String::from_utf8(buf[..len].to_vec()).ok()
+    }
+
+    pub fn is_dead(&mut self) -> bool{
+        unsafe{
+            CStr::from_ptr(XKeysymToString(*self.keysym))
+                .to_str()
+                .unwrap_or_default()
+                .to_owned()
+                .starts_with("dead")
+        }
     }
 }
 

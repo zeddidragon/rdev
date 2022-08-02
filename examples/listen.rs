@@ -182,13 +182,7 @@ fn main() {
         #[cfg(target_os = "windows")]
         let is_dead = keyboard.last_is_dead;
         #[cfg(target_os = "linux")]
-        let is_dead = unsafe {
-            CStr::from_ptr(XKeysymToString(*keyboard.keysym))
-                .to_str()
-                .unwrap_or_default()
-                .to_owned()
-                .starts_with("dead")
-        };
+        let is_dead = keyboard.is_dead();
         dbg!(is_dead);
         
 
