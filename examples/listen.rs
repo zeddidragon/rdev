@@ -8,7 +8,7 @@ use rdev::{
     EventType::{self, *},
     Key as RdevKey, Keyboard, KeyboardState,
 };
-use std::ffi::{CStr, CString};
+use std::{ffi::{CStr, CString}, sync::Arc};
 use std::ptr::{null_mut, NonNull};
 use std::sync::Mutex;
 use std::{collections::HashMap, ptr::null};
@@ -148,11 +148,16 @@ fn listen_for_char() -> Option<()> {
     }
 }
 
+use rdev::Keyboard as RdevKeyboard;
+lazy_static::lazy_static! {
+    static ref KEYBOARD: Arc<Mutex<RdevKeyboard>> = Arc::new(Mutex::new(RdevKeyboard::new().unwrap()));
+}
+
 fn main() {
     // This will block.
     std::env::set_var("KEYBOARD_ONLY", "y");
 
-    let mut keyboard = Keyboard::new().unwrap();
+    let mut keyboard = KEYBOARD.lock().unwrap();
     let func = move |evt: Event| {
         let (_key, _down) = match evt.event_type {
             KeyPress(k) => {
@@ -184,7 +189,6 @@ fn main() {
         #[cfg(target_os = "linux")]
         let is_dead = keyboard.is_dead();
         dbg!(is_dead);
-        
 
         #[cfg(target_os = "windows")]
         let _key = get_win_key(evt.code.into(), evt.scan_code);

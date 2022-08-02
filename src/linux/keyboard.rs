@@ -1,7 +1,7 @@
 extern crate x11;
 use crate::linux::keycodes::code_from_key;
 use crate::rdev::{EventType, Key, KeyboardState};
-use std::ffi::{CString, CStr};
+use std::ffi::{CStr, CString};
 use std::os::raw::{c_char, c_int, c_uint, c_ulong, c_void};
 use std::ptr::{null, null_mut, NonNull};
 use x11::xlib;
@@ -62,20 +62,37 @@ impl State {
 }
 
 #[derive(Debug)]
+pub struct MyXIM(xlib::XIM);
+unsafe impl Sync for MyXIM {}
+unsafe impl Send for MyXIM {}
+
+#[derive(Debug)]
+pub struct MyXIC(xlib::XIC);
+unsafe impl Sync for MyXIC {}
+unsafe impl Send for MyXIC {}
+
+#[derive(Debug)]
+pub struct MyDisplay(*mut xlib::Display);
+unsafe impl Sync for MyDisplay {}
+unsafe impl Send for MyDisplay {}
+
+#[derive(Debug)]
 pub struct Keyboard {
-    pub xim: Box<xlib::XIM>,
-    pub xic: Box<xlib::XIC>,
-    pub display: Box<*mut xlib::Display>,
+    pub xim: Box<MyXIM>,
+    pub xic: Box<MyXIC>,
+    pub display: Box<MyDisplay>,
     window: Box<xlib::Window>,
     keysym: Box<c_ulong>,
     status: Box<i32>,
     state: State,
     serial: c_ulong,
 }
+
 impl Drop for Keyboard {
     fn drop(&mut self) {
         unsafe {
-            xlib::XCloseDisplay(*self.display);
+            let MyDisplay(display) = *self.display;
+            xlib::XCloseDisplay(display);
         }
     }
 }
@@ -148,9 +165,9 @@ impl Keyboard {
             xlib::XSetICFocus(xic);
 
             Some(Keyboard {
-                xim: Box::new(xim),
-                xic: Box::new(xic),
-                display: Box::new(dpy),
+                xim: Box::new(MyXIM(xim)),
+                xic: Box::new(MyXIC(xic)),
+                display: Box::new(MyDisplay(dpy)),
                 window: Box::new(window),
                 keysym: Box::new(0),
                 status: Box::new(0),
@@ -169,14 +186,17 @@ impl Keyboard {
         keycode: c_uint,
         state: c_uint,
     ) -> Option<String> {
-        if self.display.is_null() || self.xic.is_null() {
+        let MyDisplay(display) = *self.display;
+        let MyXIC(xic) = *self.xic;
+        if display.is_null() || xic.is_null() {
             println!("We don't seem to have a display or a xic");
             return None;
         }
         const BUF_LEN: usize = 4;
         let mut buf = [0_u8; BUF_LEN];
+        let MyDisplay(display) = *self.display;
         let key = xlib::XKeyEvent {
-            display: *self.display,
+            display,
             root: 0,
             window: *self.window,
             subwindow: 0,
@@ -203,8 +223,9 @@ impl Keyboard {
         // -----------------------------------------------------------------
         xlib::XFilterEvent(&mut event, 0);
 
+        let MyXIC(xic) = *self.xic;
         let ret = xlib::Xutf8LookupString(
-            *self.xic,
+            xic,
             &mut event.key,
             buf.as_mut_ptr() as *mut c_char,
             BUF_LEN as c_int,
@@ -234,8 +255,8 @@ impl Keyboard {
         String::from_utf8(buf[..len].to_vec()).ok()
     }
 
-    pub fn is_dead(&mut self) -> bool{
-        unsafe{
+    pub fn is_dead(&mut self) -> bool {
+        unsafe {
             CStr::from_ptr(XKeysymToString(*self.keysym))
                 .to_str()
                 .unwrap_or_default()
