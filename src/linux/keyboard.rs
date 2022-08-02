@@ -66,7 +66,7 @@ pub struct Keyboard {
     pub xic: Box<xlib::XIC>,
     pub display: Box<*mut xlib::Display>,
     window: Box<xlib::Window>,
-    keysym: Box<c_ulong>,
+    pub keysym: Box<c_ulong>,
     status: Box<i32>,
     state: State,
     serial: c_ulong,

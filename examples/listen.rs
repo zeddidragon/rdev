@@ -8,10 +8,11 @@ use rdev::{
     EventType::{self, *},
     Key as RdevKey, Keyboard, KeyboardState,
 };
-use std::ffi::CString;
+use std::ffi::{CStr, CString};
 use std::ptr::{null_mut, NonNull};
 use std::sync::Mutex;
 use std::{collections::HashMap, ptr::null};
+use x11::xlib::XKeysymToString;
 #[cfg(target_os = "linux")]
 use x11::xlib::{
     self, ButtonPressMask, KeyPressMask, KeyReleaseMask, StructureNotifyMask, XBufferOverflow,
@@ -176,8 +177,20 @@ fn main() {
         };
 
         let char_s = keyboard.add(&evt.event_type).unwrap_or_default();
-        dbg!(keyboard.last_is_dead);
         dbg!(char_s);
+
+        #[cfg(target_os = "windows")]
+        let is_dead = keyboard.last_is_dead;
+        #[cfg(target_os = "linux")]
+        let is_dead = unsafe {
+            CStr::from_ptr(XKeysymToString(*keyboard.keysym))
+                .to_str()
+                .unwrap_or_default()
+                .to_owned()
+                .starts_with("dead")
+        };
+        dbg!(is_dead);
+        
 
         #[cfg(target_os = "windows")]
         let _key = get_win_key(evt.code.into(), evt.scan_code);
