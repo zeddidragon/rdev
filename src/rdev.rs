@@ -306,6 +306,6 @@ pub trait KeyboardState {
     /// if we were to hit said key.
     fn add(&mut self, event_type: &EventType) -> Option<String>;
 
-    /// Resets the keyboard state as if we never touched it (no shift, caps_lock and so on)
-    fn reset(&mut self);
+    // Resets the keyboard state as if we never touched it (no shift, caps_lock and so on)
+    // fn reset(&mut self);
 }

@@ -7,61 +7,6 @@ use std::ptr::{null, null_mut, NonNull};
 use x11::xlib::{self, XKeysymToString};
 
 #[derive(Debug)]
-struct State {
-    alt: bool,
-    alt_gr: bool,
-    ctrl: bool,
-    caps_lock: bool,
-    shift: bool,
-    meta: bool,
-    raw: u16,
-}
-
-// Inspired from https://github.com/wavexx/screenkey
-// But without remitting events to custom windows, instead we recreate  XKeyEvent
-// from xEvent data received via xrecord.
-// Other source of inspiration https://gist.github.com/baines/5a49f1334281b2685af5dcae81a6fa8a
-// Needed xproto crate as x11 does not implement _xevent.
-impl State {
-    fn new() -> State {
-        State {
-            alt: false,
-            alt_gr: false,
-            ctrl: false,
-            caps_lock: false,
-            meta: false,
-            shift: false,
-            raw: 0,
-        }
-    }
-
-    fn value(&self) -> c_uint {
-        // ignore all modiferes for name
-        // note: Can't switch input method.
-        let mut res: c_uint = 0;
-        if self.alt {
-            res += xlib::Mod1Mask;
-        }
-        if self.alt_gr {
-            res += xlib::Mod5Mask;
-        }
-        if self.ctrl {
-            res += xlib::ControlMask;
-        }
-        if self.caps_lock {
-            res += xlib::LockMask;
-        }
-        if self.meta {
-            res += xlib::Mod4Mask;
-        }
-        if self.shift {
-            res += xlib::ShiftMask;
-        }
-        res
-    }
-}
-
-#[derive(Debug)]
 pub struct MyXIM(xlib::XIM);
 unsafe impl Sync for MyXIM {}
 unsafe impl Send for MyXIM {}
@@ -84,7 +29,6 @@ pub struct Keyboard {
     window: Box<xlib::Window>,
     keysym: Box<c_ulong>,
     status: Box<i32>,
-    state: State,
     serial: c_ulong,
 }
 
@@ -171,7 +115,6 @@ impl Keyboard {
                 window: Box::new(window),
                 keysym: Box::new(0),
                 status: Box::new(0),
-                state: State::new(),
                 serial: 0,
             })
         }
@@ -304,9 +247,6 @@ impl KeyboardState for Keyboard {
             EventType::KeyRelease(_key) => None,
             _ => None,
         }
-    }
-    fn reset(&mut self) {
-        self.state = State::new();
     }
 }
 
