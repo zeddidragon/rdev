@@ -37,7 +37,7 @@ pub fn convert_event(code: c_uchar, type_: c_int, x: f64, y: f64) -> Option<Even
                 delta_y: -1,
                 delta_x: 0,
             }),
-            #[allow(clippy::identity_conversion)]
+            #[allow(clippy::useless_conversion)]
             code => Some(EventType::ButtonPress(Button::Unknown(code))),
         },
         xlib::ButtonRelease => match code {
@@ -45,7 +45,7 @@ pub fn convert_event(code: c_uchar, type_: c_int, x: f64, y: f64) -> Option<Even
             2 => Some(EventType::ButtonRelease(Button::Middle)),
             3 => Some(EventType::ButtonRelease(Button::Right)),
             4 | 5 => None,
-            #[allow(clippy::identity_conversion)]
+            #[allow(clippy::useless_conversion)]
             _ => Some(EventType::ButtonRelease(Button::Unknown(code))),
         },
         xlib::MotionNotify => Some(EventType::MouseMove { x, y }),
@@ -59,7 +59,6 @@ pub fn convert(
     type_: c_int,
     x: f64,
     y: f64,
-    state: u16,
 ) -> Option<Event> {
     let event_type = convert_event(code as c_uchar, type_, x, y)?;
     let kb: &mut Keyboard = (*keyboard).as_mut()?;
@@ -102,6 +101,7 @@ impl Display {
         }
     }
 
+    #[allow(dead_code)]
     pub fn get_mouse_pos(&self) -> Option<(u64, u64)> {
         unsafe {
             let root_window = xlib::XRootWindow(self.display, 0);

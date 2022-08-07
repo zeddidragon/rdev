@@ -2,8 +2,8 @@
 use rdev::get_win_key;
 use rdev::{
     Event,
-    EventType::{self, *},
-    Key as RdevKey, Keyboard, KeyboardState,
+    EventType::*,
+    Key as RdevKey, Keyboard as RdevKeyboard, KeyboardState,
 };
 use std::{sync::Arc};
 use std::sync::Mutex;
@@ -27,7 +27,6 @@ lazy_static::lazy_static! {
     };
 }
 
-use rdev::Keyboard as RdevKeyboard;
 lazy_static::lazy_static! {
     static ref KEYBOARD: Arc<Mutex<RdevKeyboard>> = Arc::new(Mutex::new(RdevKeyboard::new().unwrap()));
 }

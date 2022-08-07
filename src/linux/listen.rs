@@ -105,12 +105,12 @@ unsafe extern "C" fn record_callback(
 
     let code: c_uint = xdatum.code.into();
     let type_: c_int = xdatum.type_.into();
-    let state = xdatum.state;
+    // let state = xdatum.state;
 
     let x = xdatum.root_x as f64;
     let y = xdatum.root_y as f64;
 
-    if let Some(event) = convert(&mut KEYBOARD, code, type_, x, y, state) {
+    if let Some(event) = convert(&mut KEYBOARD, code, type_, x, y) {
         if let Some(callback) = &mut GLOBAL_CALLBACK {
             callback(event);
         }

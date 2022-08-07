@@ -230,7 +230,7 @@ pub enum Key {
 /// Standard mouse buttons
 /// Some mice have more than 3 buttons. These are not defined, and different
 /// OSs will give different `Button::Unknown` values.
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 pub enum Button {
     Left,
