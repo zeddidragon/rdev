@@ -1,6 +1,3 @@
-use enum_map::MaybeUninit;
-#[cfg(target_os = "linux")]
-use libc::{c_char, c_int, c_ulong, setlocale, LC_ALL};
 #[cfg(target_os = "windows")]
 use rdev::get_win_key;
 use rdev::{
@@ -8,19 +5,10 @@ use rdev::{
     EventType::{self, *},
     Key as RdevKey, Keyboard, KeyboardState,
 };
-use std::{ffi::{CStr, CString}, sync::Arc};
-use std::ptr::{null_mut, NonNull};
+use std::{sync::Arc};
 use std::sync::Mutex;
-use std::{collections::HashMap, ptr::null};
-use x11::xlib::XKeysymToString;
+use std::{collections::HashMap};
 #[cfg(target_os = "linux")]
-use x11::xlib::{
-    self, ButtonPressMask, KeyPressMask, KeyReleaseMask, StructureNotifyMask, XBufferOverflow,
-    XCreateIC, XCreateSimpleWindow, XDefaultRootWindow, XFilterEvent, XIMPreeditNothing,
-    XIMStatusNothing, XLookupBoth, XLookupKeySym, XMapWindow, XNClientWindow, XNInputStyle,
-    XNextEvent, XOpenDisplay, XOpenIM, XSelectInput, XSetICFocus, XSetLocaleModifiers,
-    Xutf8LookupString,
-};
 
 lazy_static::lazy_static! {
     static ref MUTEX_SPECIAL_KEYS: Mutex<HashMap<RdevKey, bool>> = {
@@ -37,115 +25,6 @@ lazy_static::lazy_static! {
 
         Mutex::new(m)
     };
-}
-
-#[cfg(target_os = "linux")]
-#[warn(dead_code)]
-fn listen_for_char() -> Option<()> {
-    unsafe {
-        let display = XOpenDisplay(null());
-        if display.is_null() {
-            panic!("cannot open display");
-        }
-
-        // Fix modifiers
-        setlocale(LC_ALL, CString::new("").unwrap().as_ptr());
-        XSetLocaleModifiers(CString::new("@im=none").unwrap().as_ptr());
-
-        // create windows to get Window ID.
-        let width = 400;
-        let height = 2200;
-        let win = XCreateSimpleWindow(
-            display,
-            XDefaultRootWindow(display), /* display, parent */
-            0,
-            0, /* x, y: the window manager will place the window elsewhere */
-            width,
-            height, /* width, height */
-            2,
-            100, /* border width & colour, unless you have a window manager */
-            100,
-        ); /* background colour */
-        println!("Windows id: {:?}", win);
-
-        /* tell the display server what kind of events we would like to see */
-        XSelectInput(
-            display,
-            win,
-            ButtonPressMask | StructureNotifyMask | KeyPressMask | KeyReleaseMask,
-        );
-        /* okay, put the window on the screen, please */
-        XMapWindow(display, win);
-
-        println!("Open IM");
-        let im = XOpenIM(display, null_mut(), null_mut(), null_mut());
-        NonNull::new(im)?;
-
-        println!("Create IC");
-        let input_style = CString::new(xlib::XNInputStyle).expect("CString::new failed");
-        let window_client = CString::new(xlib::XNClientWindow).expect("CString::new failed");
-        let style = xlib::XIMPreeditNothing | xlib::XIMStatusNothing;
-        let ic = XCreateIC(im, input_style, style, window_client, win, null_mut::<()>());
-        NonNull::new(ic);
-
-        println!("Select IC");
-        XSetICFocus(*Box::new(ic));
-
-        loop {
-            let event = {
-                let mut event = MaybeUninit::uninit();
-                XNextEvent(display, event.as_mut_ptr());
-                &mut event.assume_init()
-            };
-            if XFilterEvent(event, win) != 0 {
-                continue;
-            };
-            match event.type_ {
-                2 => {
-                    // Key Down
-                    let mut keysym: Box<c_ulong> = Box::new(0);
-
-                    const BUF_LEN: usize = 20;
-                    let mut buf = [0_u8; BUF_LEN];
-                    let mut status: Box<i32> = Box::new(0);
-
-                    let count = Xutf8LookupString(
-                        *Box::new(ic),
-                        &mut event.key,
-                        buf.as_mut_ptr() as *mut c_char,
-                        BUF_LEN as c_int,
-                        &mut *keysym,
-                        &mut *status,
-                    );
-
-                    println!("count: {:?}", count);
-                    if status == Box::new(XBufferOverflow) {
-                        println!("BufferOverflow\n")
-                    };
-
-                    if count != 0 {
-                        let len = buf.iter().position(|ch| ch == &0).unwrap_or(BUF_LEN);
-                        println!(
-                            "key down -> buffer: {:?} {:?}",
-                            count,
-                            String::from_utf8(buf[..len].to_vec()).ok()
-                        )
-                    };
-
-                    if status == Box::new(XLookupKeySym) || status == Box::new(XLookupBoth) {
-                        println!("status: {:?}", status)
-                    };
-                    println!("pressed KEY: {:?}", keysym);
-                }
-                3 => {
-                    // Key Up
-                    println!("Key up");
-                    println!("-------------------------");
-                }
-                _ => {}
-            }
-        }
-    }
 }
 
 use rdev::Keyboard as RdevKeyboard;
@@ -210,6 +89,4 @@ fn main() {
         // rdev::listen
         dbg!("{:?}", error);
     }
-
-    // listen_for_char();
 }

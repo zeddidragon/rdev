@@ -398,7 +398,6 @@ mod tests {
 
         // Reset
         keyboard.add(&EventType::KeyPress(Key::ShiftLeft));
-        keyboard.reset();
         let char_s = keyboard.add(&EventType::KeyPress(Key::KeyS)).unwrap();
         assert_eq!(char_s, "s".to_string());
         let n = keyboard.add(&EventType::KeyRelease(Key::KeyS));
