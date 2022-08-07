@@ -1,11 +1,10 @@
 extern crate x11;
 use crate::linux::keycodes::code_from_key;
-use crate::rdev::{EventType, Key, KeyboardState};
+use crate::rdev::{EventType, KeyboardState};
 use std::ffi::{CStr, CString};
 use std::os::raw::{c_char, c_int, c_uint, c_ulong, c_void};
 use std::ptr::{null, null_mut, NonNull};
-use x11::xlib;
-use x11::xlib::XKeysymToString;
+use x11::xlib::{self, XKeysymToString};
 
 #[derive(Debug)]
 struct State {
@@ -38,6 +37,7 @@ impl State {
 
     fn value(&self) -> c_uint {
         // ignore all modiferes for name
+        // note: Can't switch input method.
         let mut res: c_uint = 0;
         if self.alt {
             res += xlib::Mod1Mask;
@@ -177,8 +177,32 @@ impl Keyboard {
         }
     }
 
-    pub(crate) fn set_raw_state(&mut self, state: u16) {
-        self.state.raw = state;
+    pub(crate) unsafe fn get_current_modifiers(&mut self) -> Option<u32> {
+        let MyDisplay(display) = *self.display;
+        let screen_number = xlib::XDefaultScreen(display);
+        let screen = xlib::XScreenOfDisplay(display, screen_number);
+        let window = xlib::XRootWindowOfScreen(screen);
+        // Passing null pointers for the things we don't need results in a
+        // segfault.
+        let mut root_return: xlib::Window = 0;
+        let mut child_return: xlib::Window = 0;
+        let mut root_x_return = 0;
+        let mut root_y_return = 0;
+        let mut win_x_return = 0;
+        let mut win_y_return = 0;
+        let mut mask_return = 0;
+        xlib::XQueryPointer(
+            display,
+            window,
+            &mut root_return,
+            &mut child_return,
+            &mut root_x_return,
+            &mut root_y_return,
+            &mut win_x_return,
+            &mut win_y_return,
+            &mut mask_return,
+        );
+        Some(mask_return)
     }
 
     pub(crate) unsafe fn name_from_code(
@@ -269,44 +293,15 @@ impl Keyboard {
 impl KeyboardState for Keyboard {
     fn add(&mut self, event_type: &EventType) -> Option<String> {
         match event_type {
-            EventType::KeyPress(key) => match key {
-                Key::ShiftLeft | Key::ShiftRight => {
-                    self.state.shift = true;
-                    None
-                }
-                Key::Alt => {
-                    self.state.alt = true;
-                    None
-                }
-                Key::AltGr => {
-                    self.state.alt_gr = true;
-                    None
-                }
-                Key::CapsLock => {
-                    self.state.caps_lock = !self.state.caps_lock;
-                    None
-                }
-                key => {
-                    let keycode = code_from_key(*key)?;
-                    let state = self.state.value();
-                    unsafe { self.name_from_code(keycode, state) }
-                }
-            },
-            EventType::KeyRelease(key) => match key {
-                Key::ShiftLeft | Key::ShiftRight => {
-                    self.state.shift = false;
-                    None
-                }
-                Key::Alt => {
-                    self.state.alt = false;
-                    None
-                }
-                Key::AltGr => {
-                    self.state.alt_gr = false;
-                    None
-                }
-                _ => None,
-            },
+            EventType::KeyPress(key) => {
+                let keycode = code_from_key(*key)?;
+                // let state = self.state.value();
+                let state = unsafe { self.get_current_modifiers().unwrap_or_default() };
+                // !!!: Igore Control
+                let state = state & 0xFFFB;
+                unsafe { self.name_from_code(keycode, state) }
+            }
+            EventType::KeyRelease(_key) => None,
             _ => None,
         }
     }
@@ -327,7 +322,7 @@ mod tests {
     /// XCB doc is sparse on the web let's say.
     fn test_thread_safety() {
         let mut keyboard = Keyboard::new().unwrap();
-        let char_s = keyboard.add(&EventType::KeyPress(Key::KeyS)).unwrap();
+        let char_s = keyboard.add(&EventType::KeyPress(crate::rdev::Key::KeyS)).unwrap();
         assert_eq!(
             char_s,
             "s".to_string(),
@@ -339,7 +334,7 @@ mod tests {
     #[ignore]
     fn test_thread_safety_2() {
         let mut keyboard = Keyboard::new().unwrap();
-        let char_s = keyboard.add(&EventType::KeyPress(Key::KeyS)).unwrap();
+        let char_s = keyboard.add(&EventType::KeyPress(crate::rdev::Key::KeyS)).unwrap();
         assert_eq!(
             char_s,
             "s".to_string(),
