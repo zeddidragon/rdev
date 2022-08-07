@@ -106,9 +106,9 @@ impl Keyboard {
             self.last_code = 0;
         } else {
             self.last_code = code;
-            self.last_scan_code = scan_code;
-            self.last_is_dead = is_dead;
+            self.last_scan_code = scan_code;  
         }
+        self.last_is_dead = is_dead;
 
         // C0 controls
         if len == 1
@@ -137,6 +137,10 @@ impl Keyboard {
         while len < 0 {
             len = ToUnicodeEx(code, scan_code, state_ptr, buff_ptr, BUF_LEN, 0, layout);
         }
+    }
+
+    pub fn is_dead(&mut self) -> bool {
+        self.last_is_dead
     }
 }
 
@@ -191,10 +195,5 @@ impl KeyboardState for Keyboard {
 
             _ => None,
         }
-    }
-
-    fn reset(&mut self) {
-        self.last_state[16] = 0;
-        self.last_state[20] = 0;
     }
 }

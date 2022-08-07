@@ -8,7 +8,7 @@ use rdev::{
 use std::{sync::Arc};
 use std::sync::Mutex;
 use std::{collections::HashMap};
-#[cfg(target_os = "linux")]
+
 
 lazy_static::lazy_static! {
     static ref MUTEX_SPECIAL_KEYS: Mutex<HashMap<RdevKey, bool>> = {
@@ -61,10 +61,6 @@ fn main() {
 
         let char_s = keyboard.add(&evt.event_type).unwrap_or_default();
         dbg!(char_s);
-
-        #[cfg(target_os = "windows")]
-        let is_dead = keyboard.last_is_dead;
-        #[cfg(target_os = "linux")]
         let is_dead = keyboard.is_dead();
         dbg!(is_dead);
 
