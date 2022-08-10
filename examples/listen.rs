@@ -24,6 +24,8 @@ lazy_static::lazy_static! {
         m.insert(RdevKey::AltGr, false);
 
         Mutex::new(m)
+
+        
     };
 }
 

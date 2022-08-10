@@ -1,4 +1,4 @@
-use rdev::{simulate, simulate_char, EventType, Key, SimulateError};
+use rdev::{simulate, EventType, Key, SimulateError};
 use std::{thread, time};
 
 fn send(event_type: &EventType) {
@@ -13,17 +13,17 @@ fn send(event_type: &EventType) {
     thread::sleep(delay);
 }
 
-fn send_char(chr: char, pressed: bool) {
-    let delay = time::Duration::from_millis(20);
-    match simulate_char(chr, pressed) {
-        Ok(()) => (),
-        Err(SimulateError) => {
-            println!("We could not send {:?}", chr);
-        }
-    }
-    // Let ths OS catchup (at least MacOS)
-    thread::sleep(delay);
-}
+// fn send_char(chr: char, pressed: bool) {
+//     let delay = time::Duration::from_millis(20);
+//     match simulate_char(chr, pressed) {
+//         Ok(()) => (),
+//         Err(SimulateError) => {
+//             println!("We could not send {:?}", chr);
+//         }
+//     }
+//     // Let ths OS catchup (at least MacOS)
+//     thread::sleep(delay);
+// }
 
 fn main() {
     // Windows: LeftBracket
@@ -39,7 +39,7 @@ fn main() {
 
     // Conbination
     send(&EventType::KeyPress(Key::ControlLeft));
-    send_char('a', true); // a â 你
-    send_char('a', false);
+    // send_char('a', true); // a â 你
+    // send_char('a', false);
     send(&EventType::KeyRelease(Key::ControlLeft));
 }

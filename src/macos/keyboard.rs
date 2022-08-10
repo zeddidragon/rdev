@@ -162,6 +162,10 @@ impl Keyboard {
         }
         String::from_utf16(&buff[..length]).ok()
     }
+
+    pub fn is_dead(&self) -> bool {
+        self.dead_state != 0
+    }
 }
 
 impl KeyboardState for Keyboard {
@@ -192,11 +196,13 @@ impl KeyboardState for Keyboard {
         }
     }
 
-    fn reset(&mut self) {
-        self.dead_state = 0;
-        self.shift = false;
-        self.caps_lock = false;
-    }
+ 
+
+    // fn reset(&mut self) {
+    //     self.dead_state = 0;
+    //     self.shift = false;
+    //     self.caps_lock = false;
+    // }
 }
 
 /*
