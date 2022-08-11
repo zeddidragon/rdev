@@ -160,6 +160,20 @@ impl Keyboard {
         if length == 0 {
             return None;
         }
+        // C0 controls
+        if length == 1
+            && matches!(
+                String::from_utf16(&buff[..length].to_vec())
+                    .unwrap()
+                    .chars()
+                    .next()
+                    .unwrap(),
+                '\u{1}'..='\u{1f}'
+            )
+        {
+            return None;
+        }
+        
         String::from_utf16(&buff[..length]).ok()
     }
 
