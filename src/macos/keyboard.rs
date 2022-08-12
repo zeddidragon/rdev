@@ -140,6 +140,7 @@ impl Keyboard {
         let mut buff = [0_u16; BUF_LEN];
         let kb_type = LMGetKbdType();
         let mut length = 0;
+        let last_dead_state = self.dead_state;
         let _retval = UCKeyTranslate(
             layout_ptr,
             code.try_into().ok()?,
@@ -154,6 +155,9 @@ impl Keyboard {
         );
         if !keyboard.is_null() {
             CFRelease(keyboard);
+        }
+        if last_dead_state != 0 && self.dead_state != 0{
+            self.dead_state = 0;
         }
         // println!("{:?}", now.elapsed());
 
