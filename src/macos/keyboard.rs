@@ -62,6 +62,7 @@ extern "C" {
 pub struct Keyboard {
     dead_state: u32,
     shift: bool,
+    alt: bool,  // options
     caps_lock: bool,
 }
 impl Keyboard {
@@ -69,12 +70,17 @@ impl Keyboard {
         Some(Keyboard {
             dead_state: 0,
             shift: false,
+            alt: false,
             caps_lock: false,
         })
     }
 
     fn modifier_state(&self) -> ModifierState {
-        if self.caps_lock || self.shift {
+        if self.alt && (self.shift || self.caps_lock)  {
+            10
+        } else if self.alt && !(self.shift || self.caps_lock) {
+            8
+        }else if !self.alt && (self.caps_lock || self.shift) {
             2
         } else {
             0
@@ -194,6 +200,10 @@ impl KeyboardState for Keyboard {
                     self.shift = true;
                     None
                 }
+                Key::Alt | Key::AltGr => {
+                    self.alt = true;
+                    None
+                }
                 Key::CapsLock => {
                     self.caps_lock = !self.caps_lock;
                     None
@@ -206,6 +216,10 @@ impl KeyboardState for Keyboard {
             EventType::KeyRelease(key) => match key {
                 Key::ShiftLeft | Key::ShiftRight => {
                     self.shift = false;
+                    None
+                }
+                Key::Alt | Key::AltGr => {
+                    self.alt = false;
                     None
                 }
                 _ => None,
