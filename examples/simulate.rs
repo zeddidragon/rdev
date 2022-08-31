@@ -1,5 +1,5 @@
 use rdev::{simulate, EventType, Key, SimulateError};
-use std::{thread, time};
+use std::{thread, time::{self, Duration}};
 
 fn send(event_type: &EventType) {
     let delay = time::Duration::from_millis(20);
@@ -31,15 +31,25 @@ fn main() {
     // in us: [
     // in fr: ^(dead key)
 
-    send(&EventType::KeyPress(Key::Unknown(219)));
-    send(&EventType::KeyRelease(Key::Unknown(219)));
+    // send(&EventType::KeyPress(Key::Unknown(219)));
+    // send(&EventType::KeyRelease(Key::Unknown(219)));
 
-    send(&EventType::KeyPress(Key::LeftBracket));
-    send(&EventType::KeyRelease(Key::LeftBracket));
+    // send(&EventType::KeyPress(Key::LeftBracket));
+    // send(&EventType::KeyRelease(Key::LeftBracket));
 
     // Conbination
-    send(&EventType::KeyPress(Key::ControlLeft));
+    // send(&EventType::KeyPress(Key::ControlLeft));
     // send_char('a', true); // a â 你
     // send_char('a', false);
-    send(&EventType::KeyRelease(Key::ControlLeft));
+    // send(&EventType::KeyRelease(Key::ControlLeft));
+
+    // wayland suppport
+    use rdev::{simulate_wayland, DEVICE};
+    DEVICE.lock().unwrap().synchronize().unwrap();
+    thread::sleep(Duration::from_secs(1));
+    
+    simulate_wayland(&EventType::KeyPress(Key::ShiftLeft));
+    simulate_wayland(&EventType::KeyPress(Key::KeyA));
+    simulate_wayland(&EventType::KeyRelease(Key::KeyA));
+    simulate_wayland(&EventType::KeyRelease(Key::ShiftLeft));
 }
