@@ -226,6 +226,7 @@ pub use crate::rdev::{
 mod linux;
 mod macos;
 mod windows;
+mod wayland;
 
 #[cfg(target_os = "macos")]
 use crate::macos::{display_size as _display_size, listen as _listen, simulate as _simulate};
@@ -236,6 +237,8 @@ pub use crate::macos::{key_from_scancode, Keyboard};
 use crate::linux::{display_size as _display_size, listen as _listen, simulate as _simulate};
 #[cfg(target_os = "linux")]
 pub use crate::linux::{key_from_scancode, Keyboard, simulate_char};
+#[cfg(target_os = "linux")]
+pub use crate::wayland::*;
 
 #[cfg(target_os = "windows")]
 use crate::windows::{display_size as _display_size, listen as _listen, simulate as _simulate};
@@ -243,6 +246,7 @@ use crate::windows::{display_size as _display_size, listen as _listen, simulate 
 pub use crate::windows::{key_from_scancode, Keyboard, simulate_char};
 
 pub use crate::linux::code_from_key as linux_keycode_from_key;
+pub use crate::wayland::code_from_key as wayland_keycode_from_key;
 pub use crate::macos::code_from_key as macos_keycode_from_key;
 pub use crate::windows::{code_from_key as win_keycode_from_key, get_win_key, get_win_codes};
 
