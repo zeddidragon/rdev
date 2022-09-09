@@ -271,6 +271,7 @@ pub use crate::windows::{code_from_key as win_keycode_from_key, get_win_key, get
 ///     }
 /// }
 /// ```
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
 pub fn listen<T>(callback: T) -> Result<(), ListenError>
 where
     T: FnMut(Event) + 'static,
@@ -310,6 +311,7 @@ where
 ///     });
 /// }
 /// ```
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
 pub fn simulate(event_type: &EventType) -> Result<(), SimulateError> {
     _simulate(event_type)
 }
@@ -323,6 +325,7 @@ pub fn simulate(event_type: &EventType) -> Result<(), SimulateError> {
 /// let (w, h) = display_size().unwrap();
 /// println!("My screen size : {:?}x{:?}", w, h);
 /// ```
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
 pub fn display_size() -> Result<(u64, u64), DisplayError> {
     _display_size()
 }
