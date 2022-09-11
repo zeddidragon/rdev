@@ -38,18 +38,18 @@ fn main() {
     // send(&EventType::KeyRelease(Key::LeftBracket));
 
     // Conbination
-    // send(&EventType::KeyPress(Key::ControlLeft));
+    send(&EventType::KeyPress(Key::ControlLeft));
     // send_char('a', true); // a â 你
     // send_char('a', false);
-    // send(&EventType::KeyRelease(Key::ControlLeft));
+    send(&EventType::KeyRelease(Key::ControlLeft));
 
     // wayland suppport
-    use rdev::{simulate_wayland, DEVICE};
-    DEVICE.lock().unwrap().synchronize().unwrap();
-    thread::sleep(Duration::from_secs(1));
+    // use rdev::{simulate_wayland, DEVICE};
+    // DEVICE.lock().unwrap().synchronize().unwrap();
+    // thread::sleep(Duration::from_secs(1));
     
-    simulate_wayland(&EventType::KeyPress(Key::ShiftLeft));
-    simulate_wayland(&EventType::KeyPress(Key::KeyA));
-    simulate_wayland(&EventType::KeyRelease(Key::KeyA));
-    simulate_wayland(&EventType::KeyRelease(Key::ShiftLeft));
+    // simulate_wayland(&EventType::KeyPress(Key::ShiftLeft));
+    // simulate_wayland(&EventType::KeyPress(Key::KeyA));
+    // simulate_wayland(&EventType::KeyRelease(Key::KeyA));
+    // simulate_wayland(&EventType::KeyRelease(Key::ShiftLeft));
 }
