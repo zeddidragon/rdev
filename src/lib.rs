@@ -226,6 +226,8 @@ pub use crate::rdev::{
 mod linux;
 mod macos;
 mod windows;
+// #[cfg(feature = "unstable_wayland")]
+// mod wayland;
 
 #[cfg(target_os = "macos")]
 use crate::macos::{display_size as _display_size, listen as _listen, simulate as _simulate};
@@ -235,7 +237,12 @@ pub use crate::macos::{key_from_scancode, Keyboard};
 #[cfg(target_os = "linux")]
 use crate::linux::{display_size as _display_size, listen as _listen, simulate as _simulate};
 #[cfg(target_os = "linux")]
-pub use crate::linux::{key_from_scancode, Keyboard, simulate_char};
+pub use crate::linux::{Keyboard, simulate_char};
+#[cfg(any(target_os = "android", target_os = "linux"))]
+pub use crate::linux::key_from_scancode;
+// #[cfg(feature = "unstable_wayland")]
+// #[cfg(target_os = "linux")]
+// pub use crate::wayland::*;
 
 #[cfg(target_os = "windows")]
 use crate::windows::{display_size as _display_size, listen as _listen, simulate as _simulate};
@@ -243,6 +250,8 @@ use crate::windows::{display_size as _display_size, listen as _listen, simulate 
 pub use crate::windows::{key_from_scancode, Keyboard, simulate_char};
 
 pub use crate::linux::code_from_key as linux_keycode_from_key;
+// #[cfg(feature = "unstable_wayland")]
+// pub use crate::wayland::code_from_key as wayland_keycode_from_key;
 pub use crate::macos::code_from_key as macos_keycode_from_key;
 pub use crate::windows::{code_from_key as win_keycode_from_key, get_win_key, get_win_codes};
 
@@ -267,6 +276,7 @@ pub use crate::windows::{code_from_key as win_keycode_from_key, get_win_key, get
 ///     }
 /// }
 /// ```
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
 pub fn listen<T>(callback: T) -> Result<(), ListenError>
 where
     T: FnMut(Event) + 'static,
@@ -306,6 +316,7 @@ where
 ///     });
 /// }
 /// ```
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
 pub fn simulate(event_type: &EventType) -> Result<(), SimulateError> {
     _simulate(event_type)
 }
@@ -319,6 +330,7 @@ pub fn simulate(event_type: &EventType) -> Result<(), SimulateError> {
 /// let (w, h) = display_size().unwrap();
 /// println!("My screen size : {:?}x{:?}", w, h);
 /// ```
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
 pub fn display_size() -> Result<(u64, u64), DisplayError> {
     _display_size()
 }
