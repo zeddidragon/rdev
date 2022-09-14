@@ -4,7 +4,7 @@ use std::convert::{TryFrom, TryInto};
 use std::mem::size_of;
 use std::ptr::null_mut;
 use winapi::ctypes::{c_int, c_short};
-use winapi::shared::minwindef::{DWORD, UINT, WORD};
+use winapi::shared::minwindef::{DWORD, LOWORD, UINT, WORD};
 use winapi::shared::ntdef::LONG;
 use winapi::um::winuser::{
     GetForegroundWindow, GetKeyboardLayout, GetSystemMetrics, GetWindowThreadProcessId, INPUT_u,
@@ -82,17 +82,19 @@ fn sim_keyboard_event(flags: DWORD, vk: WORD, scan: WORD) -> Result<(), Simulate
 pub fn simulate(event_type: &EventType) -> Result<(), SimulateError> {
     match event_type {
         EventType::KeyPress(key) => {
+            let layout = unsafe {
+                let current_window_thread_id =
+                    GetWindowThreadProcessId(GetForegroundWindow(), null_mut());
+                GetKeyboardLayout(current_window_thread_id)
+            };
             let (code, scancode) = get_win_codes(*key);
-            let code = if code == 165 {
+            let code = if code == 165 && LOWORD(layout as usize as u32) == 0x0412 {
+                winapi::um::winuser::VK_HANGUL as u32
+            } else if code == 165 {
                 // altgr
                 165
             } else if scancode != 0 {
-                unsafe {
-                    let current_window_thread_id =
-                        GetWindowThreadProcessId(GetForegroundWindow(), null_mut());
-                    let layout = GetKeyboardLayout(current_window_thread_id);
-                    MapVirtualKeyExW(scancode as _, MAPVK_VSC_TO_VK_EX, layout)
-                }
+                unsafe { MapVirtualKeyExW(scancode as _, MAPVK_VSC_TO_VK_EX, layout) }
             } else {
                 code
             };
