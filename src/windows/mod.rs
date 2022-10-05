@@ -4,7 +4,6 @@ extern crate winapi;
 mod common;
 #[cfg(target_os = "windows")]
 mod display;
-#[cfg(feature = "unstable_grab")]
 #[cfg(target_os = "windows")]
 mod grab;
 #[cfg(target_os = "windows")]
@@ -19,7 +18,6 @@ mod simulate;
 pub use crate::windows::common::*;
 #[cfg(target_os = "windows")]
 pub use crate::windows::display::display_size;
-#[cfg(feature = "unstable_grab")]
 #[cfg(target_os = "windows")]
 pub use crate::windows::grab::grab;
 #[cfg(target_os = "windows")]

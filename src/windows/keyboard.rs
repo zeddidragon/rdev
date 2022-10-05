@@ -78,7 +78,6 @@ impl Keyboard {
         let layout = GetKeyboardLayout(current_window_thread_id);
         let len = ToUnicodeEx(code, scan_code, state_ptr, buff_ptr, 8 - 1, 0, layout);
         let mut is_dead = false;
-        dbg!(len);
         let result = match len {
             0 => None,
             -1 => {

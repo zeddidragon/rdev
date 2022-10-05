@@ -334,13 +334,11 @@ pub fn simulate(event_type: &EventType) -> Result<(), SimulateError> {
 pub fn display_size() -> Result<(u64, u64), DisplayError> {
     _display_size()
 }
-#[cfg(feature = "unstable_grab")]
+
 #[cfg(target_os = "linux")]
 pub use crate::linux::grab as _grab;
-#[cfg(feature = "unstable_grab")]
 #[cfg(target_os = "macos")]
 pub use crate::macos::grab as _grab;
-#[cfg(feature = "unstable_grab")]
 #[cfg(target_os = "windows")]
 pub use crate::windows::grab as _grab;
 
@@ -369,7 +367,6 @@ pub use crate::windows::grab as _grab;
 ///     }
 /// }
 /// ```
-#[cfg(any(feature = "unstable_grab"))]
 pub fn grab<T>(callback: T) -> Result<(), GrabError>
 where
     T: Fn(Event) -> Option<Event> + 'static,

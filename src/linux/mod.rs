@@ -6,7 +6,6 @@ extern crate x11;
 mod common;
 #[cfg(target_os = "linux")]
 mod display;
-#[cfg(feature = "unstable_grab")]
 #[cfg(target_os = "linux")]
 mod grab;
 #[cfg(target_os = "linux")]
@@ -19,7 +18,6 @@ mod keycodes;
 
 #[cfg(target_os = "linux")]
 pub use crate::linux::display::display_size;
-#[cfg(feature = "unstable_grab")]
 #[cfg(target_os = "linux")]
 pub use crate::linux::grab::grab;
 #[cfg(target_os = "linux")]
