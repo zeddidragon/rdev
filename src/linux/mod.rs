@@ -10,20 +10,20 @@ mod display;
 mod grab;
 #[cfg(target_os = "linux")]
 mod keyboard;
+mod keycodes;
 #[cfg(target_os = "linux")]
 mod listen;
 #[cfg(target_os = "linux")]
 mod simulate;
-mod keycodes;
 
 #[cfg(target_os = "linux")]
 pub use crate::linux::display::display_size;
 #[cfg(target_os = "linux")]
-pub use crate::linux::grab::{grab, BROADCAST_CONNECT};
+pub use crate::linux::grab::{grab, GRABED_KEYS, BROADCAST_CONNECT};
 #[cfg(target_os = "linux")]
 pub use crate::linux::keyboard::Keyboard;
+pub use crate::linux::keycodes::*;
 #[cfg(target_os = "linux")]
 pub use crate::linux::listen::listen;
 #[cfg(target_os = "linux")]
 pub use crate::linux::simulate::{simulate, simulate_char};
-pub use crate::linux::keycodes::*;
