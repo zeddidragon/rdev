@@ -3,6 +3,7 @@ use crate::macos::common::*;
 use crate::rdev::{Event, GrabError};
 use cocoa::base::nil;
 use cocoa::foundation::NSAutoreleasePool;
+use core_foundation::runloop::CFRunLoopGetCurrent;
 use core_graphics::event::{CGEventTapLocation, CGEventType};
 use std::os::raw::c_void;
 
@@ -54,7 +55,7 @@ where
         }
 
         let current_loop = CFRunLoopGetCurrent();
-        CFRunLoopAddSource(current_loop, _loop, kCFRunLoopCommonModes);
+        CFRunLoopAddSource(current_loop as _, _loop, kCFRunLoopCommonModes);
 
         CGEventTapEnable(tap, true);
         CFRunLoopRun();
