@@ -19,7 +19,7 @@ mod keycodes;
 #[cfg(target_os = "linux")]
 pub use crate::linux::display::display_size;
 #[cfg(target_os = "linux")]
-pub use crate::linux::grab::grab;
+pub use crate::linux::grab::{grab, BROADCAST_CONNECT};
 #[cfg(target_os = "linux")]
 pub use crate::linux::keyboard::Keyboard;
 #[cfg(target_os = "linux")]
