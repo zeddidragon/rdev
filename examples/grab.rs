@@ -5,12 +5,8 @@ use rdev::{BROADCAST_CONNECT, GRABED_KEYS};
 
 fn callback(event: Event) -> Option<Event> {
     match event.event_type {
-        EventType::KeyPress(Key::Tab) | EventType::KeyRelease(Key::Tab) => {
-            println!("{:?}", event);
-            None
-        }
-        EventType::KeyPress(Key::ControlLeft) | EventType::KeyRelease(Key::ControlLeft) => {
-            println!("{:?}", event);
+        EventType::KeyPress(key) | EventType::KeyRelease(key) => {
+            println!("{:?}", key);
             None
         }
         _ => Some(event),

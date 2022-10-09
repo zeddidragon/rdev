@@ -4,11 +4,10 @@ use crate::{
 };
 use std::{
     collections::HashSet,
-    ffi::c_int,
     mem::zeroed,
     ptr,
     sync::{mpsc::Sender, Arc, Mutex},
-    time::SystemTime,
+    time::SystemTime, os::raw::c_int,
 };
 use strum::IntoEnumIterator;
 use x11::xlib::{self, Display, GrabModeAsync, KeyPressMask, XUngrabKey};
@@ -113,14 +112,14 @@ fn set_key_hook() {
                     if is_grab {
                         grab_keys(display, grab_window);
                         loop {
-                            let mut should_quit = false;
+                            xlib::XNextEvent(display, &mut x_event);
                             if let Ok(is_grab) = recv.try_recv() {
                                 if !is_grab {
                                     ungrab_keys(display, grab_window);
-                                    should_quit = true;
+                                    xlib::XNextEvent(display, &mut x_event);
+                                    break;
                                 }
                             }
-                            xlib::XNextEvent(display, &mut x_event);
 
                             let key = key_from_scancode(x_event.key.keycode);
                             let is_press = x_event.type_ == KEYPRESS_EVENT;
@@ -128,10 +127,6 @@ fn set_key_hook() {
 
                             if let Some(callback) = &mut GLOBAL_CALLBACK {
                                 callback(event);
-                            }
-
-                            if should_quit {
-                                break;
                             }
                         }
                     }
