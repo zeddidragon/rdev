@@ -5,9 +5,14 @@ use crate::{
 use std::{
     collections::HashSet,
     mem::zeroed,
+    os::raw::c_int,
     ptr,
-    sync::{mpsc::Sender, Arc, Mutex},
-    time::SystemTime, os::raw::c_int,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        mpsc::Sender,
+        Arc, Mutex,
+    },
+    time::SystemTime,
 };
 use strum::IntoEnumIterator;
 use x11::xlib::{self, Display, GrabModeAsync, KeyPressMask, XUngrabKey};
@@ -16,6 +21,7 @@ const KEYPRESS_EVENT: i32 = 2;
 const MODIFIERS: i32 = 0;
 
 pub static mut GLOBAL_CALLBACK: Option<Box<dyn FnMut(Event) -> Option<Event>>> = None;
+pub static mut IS_GRAB: AtomicBool = AtomicBool::new(false);
 
 lazy_static::lazy_static! {
     pub static ref GRABED_KEYS: Arc<Mutex<HashSet<RdevKey>>> = Arc::new(Mutex::new(HashSet::<RdevKey>::new()));
@@ -108,26 +114,22 @@ fn set_key_hook() {
             xlib::XSelectInput(display, grab_window, KeyPressMask);
             let mut x_event: xlib::XEvent = zeroed();
             loop {
-                if let Ok(is_grab) = recv.recv() {
-                    if is_grab {
-                        grab_keys(display, grab_window);
-                        loop {
+                if IS_GRAB.load(Ordering::SeqCst) {
+                    grab_keys(display, grab_window);
+                    loop {
+                        xlib::XNextEvent(display, &mut x_event);
+                        if !IS_GRAB.load(Ordering::SeqCst) {
+                            ungrab_keys(display, grab_window);
                             xlib::XNextEvent(display, &mut x_event);
-                            if let Ok(is_grab) = recv.try_recv() {
-                                if !is_grab {
-                                    ungrab_keys(display, grab_window);
-                                    xlib::XNextEvent(display, &mut x_event);
-                                    break;
-                                }
-                            }
+                            break;
+                        }
 
-                            let key = key_from_scancode(x_event.key.keycode);
-                            let is_press = x_event.type_ == KEYPRESS_EVENT;
-                            let event = convert_event(key, is_press);
+                        let key = key_from_scancode(x_event.key.keycode);
+                        let is_press = x_event.type_ == KEYPRESS_EVENT;
+                        let event = convert_event(key, is_press);
 
-                            if let Some(callback) = &mut GLOBAL_CALLBACK {
-                                callback(event);
-                            }
+                        if let Some(callback) = &mut GLOBAL_CALLBACK {
+                            callback(event);
                         }
                     }
                 }
