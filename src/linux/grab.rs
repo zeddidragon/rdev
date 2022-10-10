@@ -1,7 +1,6 @@
 // This code is awful. Good luck
 use crate::{
-    key_from_scancode, linux_keycode_from_key, simulate, Event, EventType, GrabError,
-    Key as RdevKey,
+    key_from_scancode, linux_keycode_from_key, Event, EventType, GrabError, Key as RdevKey,
 };
 use std::{
     collections::HashSet,
@@ -16,7 +15,7 @@ use std::{
     time::SystemTime,
 };
 use strum::IntoEnumIterator;
-use x11::xlib::{self, Display, GrabModeAsync, KeyPressMask, XUngrabKey};
+use x11::xlib::{self, AnyModifier, Display, GrabModeAsync, KeyPressMask, XUngrabKey};
 
 const KEYPRESS_EVENT: i32 = 2;
 const MODIFIERS: i32 = 0;
@@ -39,15 +38,6 @@ pub fn init_grabed_keys() {
                     }
                 }
             }
-        }
-    }
-}
-
-fn send(event_type: &EventType) {
-    match simulate(event_type) {
-        Ok(()) => (),
-        Err(simulate_error) => {
-            println!("We could not send {:?}", simulate_error);
         }
     }
 }
@@ -75,7 +65,7 @@ fn grab_key(display: *mut Display, grab_window: u64, keycode: i32) {
         xlib::XGrabKey(
             display,
             keycode,
-            MODIFIERS as _,
+            AnyModifier,
             grab_window,
             c_int::from(true),
             GrabModeAsync,
@@ -85,34 +75,7 @@ fn grab_key(display: *mut Display, grab_window: u64, keycode: i32) {
 }
 
 fn grab_keys(display: *mut Display, grab_window: u64) {
-    // Passing null pointers for the things we don't need results in a
-    // segfault.
-    let mut root_return: xlib::Window = 0;
-    let mut child_return: xlib::Window = 0;
-    let mut root_x_return = 0;
-    let mut root_y_return = 0;
-    let mut win_x_return = 0;
-    let mut win_y_return = 0;
-    let mut mask_return = 0;
-    unsafe {
-        xlib::XQueryPointer(
-            display,
-            grab_window,
-            &mut root_return,
-            &mut child_return,
-            &mut root_x_return,
-            &mut root_y_return,
-            &mut win_x_return,
-            &mut win_y_return,
-            &mut mask_return,
-        );
-    }
-    let numlocked = mask_return & 16 != 0;
-    if numlocked {
-        send(&EventType::KeyPress(RdevKey::NumLock));
-        send(&EventType::KeyRelease(RdevKey::NumLock));
-    };
-    
+    println!("grab keys");
     for key in RdevKey::iter() {
         let keycode: i32 = linux_keycode_from_key(key).unwrap_or_default() as _;
         if is_key_grabed(key) {
@@ -123,11 +86,12 @@ fn grab_keys(display: *mut Display, grab_window: u64) {
 
 fn ungrab_key(display: *mut Display, grab_window: u64, keycode: i32) {
     unsafe {
-        XUngrabKey(display, keycode, MODIFIERS as _, grab_window);
+        XUngrabKey(display, keycode, AnyModifier, grab_window);
     }
 }
 
 fn ungrab_keys(display: *mut Display, grab_window: u64) {
+    println!("ungrab keys");
     for key in RdevKey::iter() {
         let keycode: i32 = linux_keycode_from_key(key).unwrap_or_default() as _;
         if is_key_grabed(key) {
@@ -143,7 +107,7 @@ fn set_key_hook() {
         let screen = xlib::XScreenOfDisplay(display, screen_number);
         let grab_window = xlib::XRootWindowOfScreen(screen);
 
-        let (send, recv) = std::sync::mpsc::channel::<bool>();
+        let (send, _recv) = std::sync::mpsc::channel::<bool>();
         *BROADCAST_CONNECT.lock().unwrap() = Some(send);
 
         let handle = std::thread::spawn(move || {
