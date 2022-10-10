@@ -141,23 +141,23 @@ pub unsafe fn convert(
         _ => None,
     };
     if let Some(event_type) = option_type {
-        let name = match event_type {
-            EventType::KeyPress(k) | EventType::KeyRelease(k) => {
-                let code =
-                    cg_event.get_integer_value_field(EventField::KEYBOARD_EVENT_KEYCODE) as u32;
-                let flags = cg_event.get_flags();
-                let mut s = keyboard_state.create_string_for_key(code, flags);
-                if s.is_none() {
-                    s = Some(key_to_name(k).to_owned())
-                }
-                s
-            }
-            _ => None,
-        };
+        // let name = match event_type {
+        //     EventType::KeyPress(k) | EventType::KeyRelease(k) => {
+        //         let code =
+        //             cg_event.get_integer_value_field(EventField::KEYBOARD_EVENT_KEYCODE) as u32;
+        //         let flags = cg_event.get_flags();
+        //         let mut s = keyboard_state.create_string_for_key(code, flags);
+        //         if s.is_none() {
+        //             s = Some(key_to_name(k).to_owned())
+        //         }
+        //         s
+        //     }
+        //     _ => None,
+        // };
         return Some(Event {
             event_type,
             time: SystemTime::now(),
-            name,
+            name: None,
             code: code as _,
             scan_code: code as _,
         });

@@ -6,8 +6,8 @@ use rdev::{
 pub static mut IS_GRAB: bool = false;
 use std::{
     collections::{HashMap, HashSet},
-    ffi::c_int,
     mem::zeroed,
+    os::raw::c_int,
     ptr,
     sync::{mpsc::Sender, Arc, Mutex},
     thread,
