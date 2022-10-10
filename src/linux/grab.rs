@@ -75,7 +75,6 @@ fn grab_key(display: *mut Display, grab_window: u64, keycode: i32) {
 }
 
 fn grab_keys(display: *mut Display, grab_window: u64) {
-    println!("grab keys");
     for key in RdevKey::iter() {
         let keycode: i32 = linux_keycode_from_key(key).unwrap_or_default() as _;
         if is_key_grabed(key) {
@@ -91,7 +90,6 @@ fn ungrab_key(display: *mut Display, grab_window: u64, keycode: i32) {
 }
 
 fn ungrab_keys(display: *mut Display, grab_window: u64) {
-    println!("ungrab keys");
     for key in RdevKey::iter() {
         let keycode: i32 = linux_keycode_from_key(key).unwrap_or_default() as _;
         if is_key_grabed(key) {
