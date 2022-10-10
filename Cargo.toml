@@ -34,7 +34,7 @@ core-graphics = {version = "0.22.3", features = ["highsierra"]}
 
 [target.'cfg(target_os = "linux")'.dependencies]
 epoll = {version = "4.1.0"}
-evdev-rs = {version = "0.6.0"}
+# evdev-rs = {version = "0.6.0"}
 inotify = {version = "0.10.0", default-features = false}
 libc = "0.2"
 x11 = {version = "2.18", features = ["xlib", "xrecord", "xinput"]}
