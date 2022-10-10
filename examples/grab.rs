@@ -12,12 +12,12 @@ fn callback(event: Event) -> Option<Event> {
         _ => Some(event),
     }
 }
-
+/* Notice: XGrabKey need without NUMLOCK */
 fn main() {
     #[cfg(target_os = "linux")]
     {
         std::thread::spawn(|| {
-            let delay = core::time::Duration::from_millis(10);
+            let delay = core::time::Duration::from_millis(100);
             std::thread::sleep(delay);
 
             unsafe {
