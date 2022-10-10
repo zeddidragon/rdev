@@ -85,6 +85,34 @@ fn grab_key(display: *mut Display, grab_window: u64, keycode: i32) {
 }
 
 fn grab_keys(display: *mut Display, grab_window: u64) {
+    // Passing null pointers for the things we don't need results in a
+    // segfault.
+    let mut root_return: xlib::Window = 0;
+    let mut child_return: xlib::Window = 0;
+    let mut root_x_return = 0;
+    let mut root_y_return = 0;
+    let mut win_x_return = 0;
+    let mut win_y_return = 0;
+    let mut mask_return = 0;
+    unsafe {
+        xlib::XQueryPointer(
+            display,
+            grab_window,
+            &mut root_return,
+            &mut child_return,
+            &mut root_x_return,
+            &mut root_y_return,
+            &mut win_x_return,
+            &mut win_y_return,
+            &mut mask_return,
+        );
+    }
+    let numlocked = mask_return & 16 != 0;
+    if numlocked {
+        send(&EventType::KeyPress(RdevKey::NumLock));
+        send(&EventType::KeyRelease(RdevKey::NumLock));
+    };
+    
     for key in RdevKey::iter() {
         let keycode: i32 = linux_keycode_from_key(key).unwrap_or_default() as _;
         if is_key_grabed(key) {
@@ -114,32 +142,6 @@ fn set_key_hook() {
         let screen_number = xlib::XDefaultScreen(display);
         let screen = xlib::XScreenOfDisplay(display, screen_number);
         let grab_window = xlib::XRootWindowOfScreen(screen);
-
-        // Passing null pointers for the things we don't need results in a
-        // segfault.
-        let mut root_return: xlib::Window = 0;
-        let mut child_return: xlib::Window = 0;
-        let mut root_x_return = 0;
-        let mut root_y_return = 0;
-        let mut win_x_return = 0;
-        let mut win_y_return = 0;
-        let mut mask_return = 0;
-        xlib::XQueryPointer(
-            display,
-            grab_window,
-            &mut root_return,
-            &mut child_return,
-            &mut root_x_return,
-            &mut root_y_return,
-            &mut win_x_return,
-            &mut win_y_return,
-            &mut mask_return,
-        );
-        let numlocked = mask_return & 16 != 0;
-        if numlocked {
-            send(&EventType::KeyPress(RdevKey::NumLock));
-            send(&EventType::KeyRelease(RdevKey::NumLock));
-        };
 
         let (send, recv) = std::sync::mpsc::channel::<bool>();
         *BROADCAST_CONNECT.lock().unwrap() = Some(send);
