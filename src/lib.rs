@@ -226,8 +226,10 @@ pub use crate::rdev::{
 mod linux;
 mod macos;
 mod windows;
-// #[cfg(feature = "unstable_wayland")]
-// mod wayland;
+
+pub use crate::linux::code_from_key as linux_keycode_from_key;
+pub use crate::macos::code_from_key as macos_keycode_from_key;
+pub use crate::windows::{code_from_key as win_keycode_from_key, get_win_codes, get_win_key};
 
 #[cfg(target_os = "macos")]
 use crate::macos::{display_size as _display_size, listen as _listen, simulate as _simulate};
@@ -240,20 +242,11 @@ pub use crate::linux::key_from_scancode;
 use crate::linux::{display_size as _display_size, listen as _listen, simulate as _simulate};
 #[cfg(target_os = "linux")]
 pub use crate::linux::{simulate_char, Keyboard};
-// #[cfg(feature = "unstable_wayland")]
-// #[cfg(target_os = "linux")]
-// pub use crate::wayland::*;
 
 #[cfg(target_os = "windows")]
 use crate::windows::{display_size as _display_size, listen as _listen, simulate as _simulate};
 #[cfg(target_os = "windows")]
 pub use crate::windows::{key_from_scancode, simulate_char, Keyboard};
-
-pub use crate::linux::code_from_key as linux_keycode_from_key;
-// #[cfg(feature = "unstable_wayland")]
-// pub use crate::wayland::code_from_key as wayland_keycode_from_key;
-pub use crate::macos::code_from_key as macos_keycode_from_key;
-pub use crate::windows::{code_from_key as win_keycode_from_key, get_win_codes, get_win_key};
 
 /// Listening to global events. Caveat: On MacOS, you require the listen
 /// loop needs to be the primary app (no fork before) and need to have accessibility
@@ -367,6 +360,7 @@ pub use crate::windows::grab as _grab;
 ///     }
 /// }
 /// ```
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
 pub fn grab<T>(callback: T) -> Result<(), GrabError>
 where
     T: Fn(Event) -> Option<Event> + 'static,
@@ -374,6 +368,7 @@ where
     _grab(callback)
 }
 
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
 pub(crate) fn keyboard_only() -> bool {
     !std::env::var("KEYBOARD_ONLY")
         .unwrap_or_default()
