@@ -1,14 +1,14 @@
-use rdev::{grab, start_grab_listen, exit_grab_listen, ungrab};
 use core::time::Duration;
-use std::thread;
 use rdev::Event;
 use rdev::EventType;
-use rdev::Key;
-
+use rdev::Key as RdevKey;
+use rdev::{disable_grab, enable_grab, exit_grab_listen, start_grab_listen};
+use std::collections::HashSet;
+use std::thread;
 
 fn callback(event: Event) -> Option<Event> {
     match event.event_type {
-        EventType::KeyPress(Key::ControlLeft) | EventType::KeyRelease(Key::ControlLeft) => {
+        EventType::KeyPress(RdevKey::ControlLeft) | EventType::KeyRelease(RdevKey::ControlLeft) => {
             /*  */
             println!("{:?}", event.event_type);
             None
@@ -22,17 +22,19 @@ fn main() {
     let delay = Duration::from_secs(5);
 
     println!("[*] starting grab listen...");
-    start_grab_listen(callback);
+    let mut keys: HashSet<RdevKey> = HashSet::<RdevKey>::new();
+    keys.insert(RdevKey::ControlLeft);
+    start_grab_listen(callback, keys);
 
-    grab();
+    enable_grab();
     println!("[*] grab keys(5s), try to press Ctrl+C, won't work on other applications");
     thread::sleep(delay);
 
-    ungrab();
+    disable_grab();
     println!("[*] grab keys(5s), try to press Ctrl+C");
     thread::sleep(delay);
 
-    grab();
+    enable_grab();
     println!("[*] grab keys(5s), try to press Ctrl+C, won't work on other applications");
     thread::sleep(delay);
 
@@ -40,7 +42,7 @@ fn main() {
 }
 
 #[cfg(any(target_os = "windows", target_os = "macos"))]
-fn main(){
+fn main() {
     // This will block.
     if let Err(error) = grab(callback) {
         println!("Error: {:?}", error)
