@@ -336,7 +336,7 @@ pub fn display_size() -> Result<(u64, u64), DisplayError> {
 }
 
 #[cfg(target_os = "linux")]
-pub use crate::linux::{grab as _grab, BROADCAST_CONNECT, GRABED_KEYS, IS_GRAB};
+pub use crate::linux::{start_grab_listen, grab, ungrab, exit_grab_listen};
 #[cfg(target_os = "macos")]
 pub use crate::macos::grab as _grab;
 #[cfg(target_os = "windows")]
@@ -367,6 +367,7 @@ pub use crate::windows::grab as _grab;
 ///     }
 /// }
 /// ```
+#[cfg(any(target_os = "windows", target_os = "macos"))]
 pub fn grab<T>(callback: T) -> Result<(), GrabError>
 where
     T: Fn(Event) -> Option<Event> + 'static,

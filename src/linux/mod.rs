@@ -19,7 +19,7 @@ mod simulate;
 #[cfg(target_os = "linux")]
 pub use crate::linux::display::display_size;
 #[cfg(target_os = "linux")]
-pub use crate::linux::grab::{grab, GRABED_KEYS, BROADCAST_CONNECT, IS_GRAB};
+pub use crate::linux::grab::{start_grab_listen, grab, ungrab, exit_grab_listen};
 #[cfg(target_os = "linux")]
 pub use crate::linux::keyboard::Keyboard;
 pub use crate::linux::keycodes::*;
