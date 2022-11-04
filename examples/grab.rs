@@ -1,14 +1,12 @@
 use core::time::Duration;
 use rdev::Event;
 use rdev::EventType;
-use rdev::Key as RdevKey;
 use rdev::{disable_grab, enable_grab, exit_grab_listen, start_grab_listen};
-use std::collections::HashSet;
 use std::thread;
 
 fn callback(event: Event) -> Option<Event> {
     match event.event_type {
-        EventType::KeyPress(RdevKey::ControlLeft) | EventType::KeyRelease(RdevKey::ControlLeft) => {
+        EventType::KeyPress(_key) | EventType::KeyRelease(_key) => {
             /*  */
             println!("{:?}", event.event_type);
             None
@@ -22,20 +20,18 @@ fn main() {
     let delay = Duration::from_secs(5);
 
     println!("[*] starting grab listen...");
-    let mut keys: HashSet<RdevKey> = HashSet::<RdevKey>::new();
-    keys.insert(RdevKey::ControlLeft);
-    start_grab_listen(callback, keys);
+    start_grab_listen(callback);
 
-    enable_grab();
     println!("[*] grab keys(5s), try to press Ctrl+C, won't work on other applications");
+    enable_grab();
     thread::sleep(delay);
 
+    println!("[*] ungrab keys(5s), try to press Ctrl+C");
     disable_grab();
-    println!("[*] grab keys(5s), try to press Ctrl+C");
     thread::sleep(delay);
 
-    enable_grab();
     println!("[*] grab keys(5s), try to press Ctrl+C, won't work on other applications");
+    enable_grab();
     thread::sleep(delay);
 
     exit_grab_listen();

@@ -9,15 +9,14 @@ use std::os::unix::prelude::AsRawFd;
 use std::path::Path;
 use std::ptr;
 use std::thread;
+use std::time::Duration;
 use std::{
-    collections::HashSet,
     mem::zeroed,
     os::raw::c_int,
     sync::{mpsc::Sender, Arc, Mutex},
     time::SystemTime,
 };
-use strum::IntoEnumIterator;
-use x11::xlib::{self, AnyModifier, Display, GrabModeAsync, KeyPressMask, XUngrabKey};
+use x11::xlib::{self, Display, GrabModeAsync, KeyPressMask, KeyReleaseMask};
 
 #[derive(Debug)]
 pub struct MyDisplay(*mut xlib::Display);
@@ -25,7 +24,6 @@ unsafe impl Sync for MyDisplay {}
 unsafe impl Send for MyDisplay {}
 
 lazy_static::lazy_static! {
-    pub static ref KEYS: Arc<Mutex<Option<HashSet<RdevKey>>>> = Arc::new(Mutex::new(None));
     pub static ref SENDER: Arc<Mutex<Option<Sender<GrabEvent>>>> = Arc::new(Mutex::new(None));
 }
 
@@ -43,13 +41,6 @@ pub enum GrabEvent {
     KeyEvent(Event),
 }
 
-pub fn init_keys(keys: HashSet<RdevKey>) {
-    let mut global_keys = KEYS.lock().unwrap();
-    if global_keys.is_none() {
-        *global_keys = Some(keys);
-    }
-}
-
 fn convert_event(key: RdevKey, is_press: bool) -> Event {
     Event {
         event_type: if is_press {
@@ -64,56 +55,34 @@ fn convert_event(key: RdevKey, is_press: bool) -> Event {
     }
 }
 
-fn is_key_grabed(key: RdevKey) -> bool {
-    let global_keys = KEYS.lock().unwrap();
-    if let Some(keys) = &*global_keys {
-        keys.get(&key).is_some()
-    } else {
-        panic!("[-] grab error in rdev: Please init keys first");
-    }
-}
-
-fn grab_key(display: *mut Display, grab_window: u64, keycode: i32) {
+fn grab_keys(display: *mut Display, grab_window: u64) {
     unsafe {
-        xlib::XGrabKey(
+        xlib::XGrabKeyboard(
             display,
-            keycode,
-            AnyModifier,
             grab_window,
             c_int::from(true),
             GrabModeAsync,
             GrabModeAsync,
+            xlib::CurrentTime,
         );
+        xlib::XFlush(display);
+        thread::sleep(Duration::from_millis(50));
     }
 }
 
-fn grab_keys(display: *mut Display, grab_window: u64) {
-    for key in RdevKey::iter() {
-        let keycode: i32 = linux_keycode_from_key(key).unwrap_or_default() as _;
-        if is_key_grabed(key) {
-            grab_key(display, grab_window, keycode);
-        }
-    }
-}
-
-fn ungrab_key(display: *mut Display, grab_window: u64, keycode: i32) {
+fn ungrab_keys(display: *mut Display) {
     unsafe {
-        XUngrabKey(display, keycode, AnyModifier, grab_window);
-    }
-}
-
-fn ungrab_keys(display: *mut Display, grab_window: u64) {
-    for key in RdevKey::iter() {
-        let keycode: i32 = linux_keycode_from_key(key).unwrap_or_default() as _;
-        if is_key_grabed(key) {
-            ungrab_key(display, grab_window, keycode);
-        }
+        xlib::XUngrabKeyboard(display, xlib::CurrentTime);
+        xlib::XFlush(display);
+        thread::sleep(Duration::from_millis(50));
     }
 }
 
 pub fn enable_grab() -> Result<(), GrabError> {
     if let Some(tx) = &*SENDER.lock().unwrap() {
         tx.send(GrabEvent::Grab).ok();
+        /* if too fast: poll cannot perceive events */
+        thread::sleep(Duration::from_millis(50));
     } else {
         return Err(GrabError::ListenError);
     };
@@ -123,21 +92,22 @@ pub fn enable_grab() -> Result<(), GrabError> {
 pub fn disable_grab() -> Result<(), GrabError> {
     if let Some(tx) = &*SENDER.lock().unwrap() {
         tx.send(GrabEvent::UnGrab).ok();
+        thread::sleep(Duration::from_millis(50));
     } else {
         return Err(GrabError::ListenError);
     };
     Ok(())
 }
 
-pub fn start_grab_listen<T>(callback: T, keys: HashSet<RdevKey>)
+pub fn start_grab_listen<T>(callback: T)
 where
     T: FnMut(Event) -> Option<Event> + 'static,
 {
     unsafe {
         GLOBAL_CALLBACK = Some(Box::new(callback));
     }
-    init_keys(keys);
     start_grab_service();
+    thread::sleep(Duration::from_millis(50));
 }
 
 pub fn exit_grab_listen() -> Result<(), GrabError> {
@@ -215,10 +185,8 @@ fn start_grab_thread() {
         let grab_window = unsafe { xlib::XRootWindowOfScreen(screen) };
 
         unsafe {
-            xlib::XSelectInput(display, grab_window, KeyPressMask);
+            xlib::XSelectInput(display, grab_window, KeyPressMask | KeyReleaseMask);
         }
-        grab_keys(display, grab_window);
-        unsafe { xlib::XFlush(display) };
 
         let grab_fd = unsafe { xlib::XConnectionNumber(display) };
         unlink_socket(FILE_PATH);
@@ -264,13 +232,11 @@ fn start_grab_thread() {
                             socket
                                 .recv(buf.as_mut_slice())
                                 .expect("recv function failed");
-                            // if recv "1": grab key 
+                            // if recv "1": grab key
                             if buf[0] == 49 {
                                 grab_keys(display, grab_window);
-                                unsafe { xlib::XFlush(display) };
                             } else {
-                                ungrab_keys(display, grab_window);
-                                unsafe { xlib::XFlush(display) };
+                                ungrab_keys(display);
                             }
                         }
                         GRAB_KEY => unsafe {
