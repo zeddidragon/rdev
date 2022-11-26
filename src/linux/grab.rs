@@ -55,7 +55,7 @@ fn convert_event(key: RdevKey, is_press: bool) -> Event {
     }
 }
 
-fn grab_keys(display: *mut Display, grab_window: u64) {
+fn grab_keys(display: *mut Display, grab_window: libc::c_ulong) {
     unsafe {
         xlib::XGrabKeyboard(
             display,

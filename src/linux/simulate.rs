@@ -96,7 +96,7 @@ unsafe fn send_native_char(chr: char, pressed: bool, display: *mut xlib::Display
         ordinal
     } else {
         ordinal | 0x01000000
-    } as u64;
+    } as libc::c_ulong;
 
     // remap keycode to keysym
     x11::xlib::XChangeKeyboardMapping(display, keycode as _, 1, &mut keysym, 1);
