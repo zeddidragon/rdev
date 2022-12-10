@@ -20,7 +20,10 @@ fn main() {
     let delay = Duration::from_secs(5);
 
     println!("[*] starting grab listen...");
-    start_grab_listen(callback);
+    if let Err(err) = start_grab_listen(callback){
+        eprintln!("start grab listen error: {:?}", err);
+        return;
+    };
 
     println!("[*] grab keys(5s), try to press Ctrl+C, won't work on other applications");
     enable_grab();
