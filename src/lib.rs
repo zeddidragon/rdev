@@ -334,6 +334,10 @@ pub use crate::linux::{start_grab_listen, enable_grab, disable_grab, exit_grab_l
 pub use crate::macos::grab as _grab;
 #[cfg(target_os = "windows")]
 pub use crate::windows::grab as _grab;
+#[cfg(target_os = "windows")]
+pub use crate::windows::set_dw_mouse_extra_info;
+#[cfg(target_os = "windows")]
+pub use crate::windows::set_dw_keyboard_extra_info;
 
 /// Grabbing global events. In the callback, returning None ignores the event
 /// and returning the event let's it pass. There is no modification of the event

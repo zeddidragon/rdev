@@ -38,7 +38,7 @@ pub enum ListenError {
 /// Errors that occur when trying to grab OS events.
 /// Be careful on Mac, not setting accessibility does not cause an error
 /// it justs ignores events.
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug)]
 #[non_exhaustive]
 pub enum GrabError {
     ListenError,
@@ -49,6 +49,10 @@ pub enum GrabError {
     /// Linux
     MissingDisplayError,
     /// Linux
+    MissScreenError,
+    // Linux
+    InvalidFileDescriptor,
+    /// Linux
     KeyboardError,
     /// Windows
     KeyHookError(u32),
@@ -56,7 +60,8 @@ pub enum GrabError {
     MouseHookError(u32),
     /// All
     SimulateError,
-    // IoError(std::io::Error),
+
+    IoError(std::io::Error)
 }
 
 // impl From<std::io::Error> for GrabError {

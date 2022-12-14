@@ -21,18 +21,30 @@ static KEYEVENTF_KEYDOWN: DWORD = 0;
 static KEYUP: u16 = 0x0002;
 static KEYDOWN: u16 = 0;
 static UNICODE: u16 = 0x0004;
+static mut DW_MOUSE_EXTRA_INFO: usize = 0;
+static mut DW_KEYBOARD_EXTRA_INFO: usize = 0;
+
+pub fn set_dw_mouse_extra_info(extra: usize) {
+    unsafe { DW_MOUSE_EXTRA_INFO = extra }
+}
+
+pub fn set_dw_keyboard_extra_info(extra: usize) {
+    unsafe { DW_KEYBOARD_EXTRA_INFO = extra }
+}
 
 fn sim_mouse_event(flags: DWORD, data: DWORD, dx: LONG, dy: LONG) -> Result<(), SimulateError> {
     let mut union: INPUT_u = unsafe { std::mem::zeroed() };
     let inner_union = unsafe { union.mi_mut() };
-    *inner_union = MOUSEINPUT {
-        dx,
-        dy,
-        mouseData: data,
-        dwFlags: flags,
-        time: 0,
-        dwExtraInfo: 0,
-    };
+    unsafe {
+        *inner_union = MOUSEINPUT {
+            dx,
+            dy,
+            mouseData: data,
+            dwFlags: flags,
+            time: 0,
+            dwExtraInfo: DW_MOUSE_EXTRA_INFO,
+        };
+    }
     let mut input = [INPUT {
         type_: INPUT_MOUSE,
         u: union,
@@ -54,13 +66,15 @@ fn sim_mouse_event(flags: DWORD, data: DWORD, dx: LONG, dy: LONG) -> Result<(), 
 fn sim_keyboard_event(flags: DWORD, vk: WORD, scan: WORD) -> Result<(), SimulateError> {
     let mut union: INPUT_u = unsafe { std::mem::zeroed() };
     let inner_union = unsafe { union.ki_mut() };
-    *inner_union = KEYBDINPUT {
-        wVk: vk,
-        wScan: scan,
-        dwFlags: flags,
-        time: 0,
-        dwExtraInfo: 0,
-    };
+    unsafe {
+        *inner_union = KEYBDINPUT {
+            wVk: vk,
+            wScan: scan,
+            dwFlags: flags,
+            time: 0,
+            dwExtraInfo: DW_KEYBOARD_EXTRA_INFO,
+        };
+    }
     let mut input = [INPUT {
         type_: INPUT_KEYBOARD,
         u: union,
