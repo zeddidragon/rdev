@@ -228,6 +228,7 @@ pub enum Key {
     Sleep,
     Separator,
     Unknown(u32),
+    ScanCode(u32),
 }
 
 /// Standard mouse buttons
