@@ -22,6 +22,7 @@ pub const TRUE: i32 = 1;
 pub const FALSE: i32 = 0;
 
 pub static mut HOOK: HHOOK = null_mut();
+// to-do: try remove unwrap() here
 lazy_static! {
     pub(crate) static ref KEYBOARD: Mutex<Keyboard> = Mutex::new(Keyboard::new().unwrap());
 }
@@ -32,7 +33,7 @@ pub unsafe fn get_code(lpdata: LPARAM) -> DWORD {
 }
 pub unsafe fn get_scan_code(lpdata: LPARAM) -> DWORD {
     let kb = *(lpdata as *const KBDLLHOOKSTRUCT);
-    if kb.flags & 0x1 == 0x01 {
+    if (kb.flags & 0x01) == 0x01 {
         0xE0 << 8 | kb.scanCode
     } else {
         kb.scanCode

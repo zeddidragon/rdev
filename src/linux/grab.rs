@@ -78,6 +78,7 @@ fn ungrab_keys(display: *mut Display) {
     }
 }
 
+// to-do: try remove unwrap() and expect() here
 fn send_to_client(grab: bool) {
     let socket = UnixDatagram::unbound().unwrap();
     if socket.connect(FILE_PATH).is_ok() {
@@ -181,7 +182,7 @@ fn get_socket() -> Result<UnixDatagram, GrabError> {
 }
 
 fn create_poll_instance() -> Result<Poll, GrabError> {
-    Ok(Poll::new().map_err(GrabError::IoError).ok().unwrap())
+    Poll::new().map_err(GrabError::IoError)
 }
 
 fn poll_register_fd(

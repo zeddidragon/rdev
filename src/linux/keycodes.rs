@@ -5,15 +5,11 @@ macro_rules! decl_keycodes {
         //TODO: make const when rust lang issue #49146 is fixed
         pub fn code_from_key(key: Key) -> Option<u32> {
             match key {
-                // note: There is no Clear key in Linux
-                // Windows->Linux: Begin key
-                Key::Clear => Some(84),
                 $(
                     Key::$key => Some($code),
                 )*
                 Key::Unknown(code) => Some(code),
-
-                _ => Some(0),
+                _ => None,
             }
         }
 

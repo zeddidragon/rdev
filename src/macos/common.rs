@@ -34,6 +34,7 @@ pub enum CGEventTapOption {
 }
 
 pub static mut LAST_FLAGS: CGEventFlags = CGEventFlags::CGEventFlagNull;
+// to-do: try remove unwrap() here
 lazy_static! {
     pub static ref KEYBOARD_STATE: Mutex<Keyboard> = Mutex::new(Keyboard::new().unwrap());
 }

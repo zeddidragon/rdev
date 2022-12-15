@@ -13,7 +13,7 @@ macro_rules! decl_keycodes {
                     Key::$key => Some($code),
                 )*
                 Key::Unknown(code) => Some(code.try_into().ok()?),
-                _ => Some(0),
+                _ => None,
             }
         }
 
@@ -65,16 +65,15 @@ macro_rules! decl_keycodes {
             }
         }
 
-        pub fn get_win_codes(key: Key) -> (u32, u32){
-            let keycode = code_from_key(key).unwrap();
+        pub fn get_win_codes(key: Key) -> Option<(u32, u32)>{
+            let keycode = code_from_key(key)?;
             let key = if key == Key::Unknown(keycode){
                 key_from_code(keycode)
             }else{
                 key
             };
-            let scancode = scancode_from_key(key).unwrap();
-
-            (keycode, scancode)
+            let scancode = scancode_from_key(key)?;
+            Some((keycode, scancode))
         }
     };
 }

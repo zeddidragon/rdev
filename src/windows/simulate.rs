@@ -1,6 +1,6 @@
 use crate::rdev::{Button, EventType, RawKey, SimulateError};
 use crate::windows::keycodes::get_win_codes;
-use std::convert::{TryFrom, TryInto};
+use std::convert::TryFrom;
 use std::mem::size_of;
 use std::ptr::null_mut;
 use winapi::ctypes::{c_int, c_short};
@@ -116,7 +116,7 @@ pub fn simulate(event_type: &EventType) -> Result<(), SimulateError> {
                             GetWindowThreadProcessId(GetForegroundWindow(), null_mut());
                         GetKeyboardLayout(current_window_thread_id)
                     };
-                    let (code, scancode) = get_win_codes(*key);
+                    let (code, scancode) = get_win_codes(*key).ok_or(SimulateError)?;
                     let code = if code == 165 && LOWORD(layout as usize as u32) == 0x0412 {
                         winapi::um::winuser::VK_HANGUL as u32
                     } else if code == 165 {
@@ -127,7 +127,7 @@ pub fn simulate(event_type: &EventType) -> Result<(), SimulateError> {
                     } else {
                         code
                     };
-                    sim_keyboard_event(KEYEVENTF_KEYDOWN, code.try_into().unwrap(), 0)
+                    sim_keyboard_event(KEYEVENTF_KEYDOWN, code as _, 0)
                 }
             }
         }
@@ -147,7 +147,7 @@ pub fn simulate(event_type: &EventType) -> Result<(), SimulateError> {
                     }
                 }
                 _ => {
-                    let (code, scancode) = get_win_codes(*key);
+                    let (code, scancode) = get_win_codes(*key).ok_or(SimulateError)?;
                     let code = if code == 165 {
                         // altgr
                         165
@@ -161,7 +161,7 @@ pub fn simulate(event_type: &EventType) -> Result<(), SimulateError> {
                     } else {
                         code
                     };
-                    sim_keyboard_event(KEYEVENTF_KEYUP, code.try_into().unwrap(), 0)
+                    sim_keyboard_event(KEYEVENTF_KEYUP, code as _, 0)
                 }
             }
         }
