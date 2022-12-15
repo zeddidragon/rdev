@@ -1,6 +1,6 @@
 use core::time;
 use rdev::{
-    key_from_scancode, linux_keycode_from_key, simulate, Event, EventType, GrabError,
+    key_from_code, linux_keycode_from_key, simulate, Event, EventType, GrabError,
     Key as RdevKey,
 };
 pub static mut IS_GRAB: bool = false;
@@ -138,7 +138,7 @@ fn set_key_hook() {
                         }
                         xlib::XNextEvent(display, &mut x_event);
 
-                        let key = key_from_scancode(x_event.key.keycode);
+                        let key = key_from_code(x_event.key.keycode);
                         let is_press = x_event.type_ == KEYPRESS_EVENT;
                         let event = convert_event(key, is_press);
 

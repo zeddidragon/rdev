@@ -26,18 +26,6 @@ macro_rules! decl_keycodes {
                 _ => Key::Unknown(code as _)
             }
         }
-
-        #[allow(dead_code)]
-        pub fn scancode_from_key(key:Key) -> Option<u32> {
-            // keycode
-            code_from_key(key)
-        }
-
-        #[allow(dead_code)]
-        pub fn key_from_scancode(scancode: u32) -> Key {
-            // keycode
-            key_from_code(scancode)
-        }
     };
 }
 

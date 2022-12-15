@@ -220,7 +220,7 @@
 mod rdev;
 pub use crate::rdev::{
     Button, DisplayError, Event, EventType, GrabCallback, GrabError, Key, KeyboardState,
-    ListenError, RawKey, SimulateError,
+    ListenError, SimulateError,
 };
 
 mod linux;
@@ -229,18 +229,15 @@ mod windows;
 
 pub use crate::linux::code_from_key as linux_keycode_from_key;
 pub use crate::macos::code_from_key as macos_keycode_from_key;
-pub use crate::windows::{
-    code_from_key as win_keycode_from_key, get_win_codes, get_win_key,
-    scancode_from_key as win_scancode_from_key,
-};
+pub use crate::windows::{code_from_key as win_keycode_from_key, get_win_codes, get_win_key};
 
 #[cfg(target_os = "macos")]
 use crate::macos::{display_size as _display_size, listen as _listen, simulate as _simulate};
 #[cfg(target_os = "macos")]
-pub use crate::macos::{key_from_scancode, Keyboard};
+pub use crate::macos::{key_from_code, Keyboard};
 
 #[cfg(any(target_os = "android", target_os = "linux"))]
-pub use crate::linux::key_from_scancode;
+pub use crate::linux::key_from_code;
 #[cfg(target_os = "linux")]
 use crate::linux::{display_size as _display_size, listen as _listen, simulate as _simulate};
 #[cfg(target_os = "linux")]
@@ -332,15 +329,15 @@ pub fn display_size() -> Result<(u64, u64), DisplayError> {
 }
 
 #[cfg(target_os = "linux")]
-pub use crate::linux::{disable_grab, enable_grab, exit_grab_listen, start_grab_listen};
+pub use crate::linux::{start_grab_listen, enable_grab, disable_grab, exit_grab_listen};
 #[cfg(target_os = "macos")]
 pub use crate::macos::grab as _grab;
 #[cfg(target_os = "windows")]
 pub use crate::windows::grab as _grab;
 #[cfg(target_os = "windows")]
-pub use crate::windows::set_dw_keyboard_extra_info;
-#[cfg(target_os = "windows")]
 pub use crate::windows::set_dw_mouse_extra_info;
+#[cfg(target_os = "windows")]
+pub use crate::windows::set_dw_keyboard_extra_info;
 
 /// Grabbing global events. In the callback, returning None ignores the event
 /// and returning the event let's it pass. There is no modification of the event
