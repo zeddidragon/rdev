@@ -92,12 +92,12 @@ decl_keycodes! {
     CapsLock, 20, 0x3A,
     ControlLeft, 162, 0x1D,
     ControlRight, 163, 0xE01D,
-    Delete, 46, 0xE053,
-    UpArrow, 38, 0xE048,
-    DownArrow, 40, 0xE050,
-    LeftArrow, 37, 0xE04B,
-    RightArrow, 39, 0xE04D,
-    End, 35, 0xE04F,
+    Delete, 46, 0xE053,     // Note 1
+    UpArrow, 38, 0xE048,    // Note 1
+    DownArrow, 40, 0xE050,  // Note 1
+    LeftArrow, 37, 0xE04B,  // Note 1
+    RightArrow, 39, 0xE04D, // Note 1
+    End, 35, 0xE04F,        // Note 1
     Escape, 27, 0x01,
     F1, 112, 0x3B,
     F2, 113, 0x3C,
@@ -111,16 +111,16 @@ decl_keycodes! {
     F10, 121, 0x44,
     F11, 122, 0x57,
     F12, 123, 0x58,
-    Home, 36, 0xE047,
+    Home, 36, 0xE047,       // Note 1
     MetaLeft, 91, 0xE05B,
-    PageDown, 34, 0xE051,
+    PageDown, 34, 0xE051,   // Note 1
     PageUp, 33, 0xE049,
     Return, 13, 0x1C,
     ShiftLeft, 160, 0x2A,
     ShiftRight, 161, 0xE036,
     Space, 32, 0x39,
     Tab, 0x09, 0x0F,
-    PrintScreen, 44, 0xE037,    // Make: E0 2A  E0 37, Break E0 B7  E0 AA
+    PrintScreen, 44, 0xE037,    // Note 4. Make: E0 2A  E0 37, Break E0 B7  E0 AA
     ScrollLock, 145, 0x46,
     NumLock, 144, 0xE045,
     BackQuote, 192, 0x29,
@@ -171,7 +171,7 @@ decl_keycodes! {
     Comma, 188, 0x33,
     Dot, 190, 0x34,
     Slash, 191, 0x35,
-    Insert, 45, 0xE052,
+    Insert, 45, 0xE052,     // Note 1
     KpMinus, 109, 0x4A,
     KpPlus, 107, 0x4E,
     KpMultiply, 106, 0x37,

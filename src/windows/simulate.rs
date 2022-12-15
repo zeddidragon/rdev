@@ -1,4 +1,4 @@
-use crate::rdev::{Button, EventType, SimulateError};
+use crate::rdev::{Button, EventType, RawKey, SimulateError};
 use crate::windows::keycodes::get_win_codes;
 use std::convert::{TryFrom, TryInto};
 use std::mem::size_of;
@@ -96,59 +96,73 @@ fn sim_keyboard_event(flags: DWORD, vk: WORD, scan: WORD) -> Result<(), Simulate
 pub fn simulate(event_type: &EventType) -> Result<(), SimulateError> {
     match event_type {
         EventType::KeyPress(key) => {
-            let layout = unsafe {
-                let current_window_thread_id =
-                    GetWindowThreadProcessId(GetForegroundWindow(), null_mut());
-                GetKeyboardLayout(current_window_thread_id)
-            };
-            if let crate::Key::ScanCode(scancode) = key {
-                let scancode_lower = scancode & 0x00FF;
-                let flags = if scancode_lower == *scancode {
-                    KEYEVENTF_SCANCODE
-                } else {
-                    KEYEVENTF_EXTENDEDKEY | KEYEVENTF_SCANCODE
-                };
-                sim_keyboard_event(flags, 0, scancode_lower as _)
-            } else {
-                let (code, scancode) = get_win_codes(*key);
-                let code = if code == 165 && LOWORD(layout as usize as u32) == 0x0412 {
-                    winapi::um::winuser::VK_HANGUL as u32
-                } else if code == 165 {
-                    // altgr
-                    165
-                } else if scancode != 0 {
-                    unsafe { MapVirtualKeyExW(scancode as _, MAPVK_VSC_TO_VK_EX, layout) }
-                } else {
-                    code
-                };
-                sim_keyboard_event(KEYEVENTF_KEYDOWN, code.try_into().unwrap(), 0)
+            match key {
+                crate::Key::RawKey(rawkey) => {
+                    if let RawKey::ScanCode(scancode) = rawkey {
+                        let scancode_lower = scancode & 0x00FF;
+                        let flags = if scancode_lower == *scancode {
+                            KEYEVENTF_SCANCODE
+                        } else {
+                            KEYEVENTF_EXTENDEDKEY | KEYEVENTF_SCANCODE
+                        };
+                        sim_keyboard_event(flags, 0, scancode_lower as _)
+                    } else {
+                        Err(SimulateError)
+                    }
+                }
+                _ => {
+                    let layout = unsafe {
+                        let current_window_thread_id =
+                            GetWindowThreadProcessId(GetForegroundWindow(), null_mut());
+                        GetKeyboardLayout(current_window_thread_id)
+                    };
+                    let (code, scancode) = get_win_codes(*key);
+                    let code = if code == 165 && LOWORD(layout as usize as u32) == 0x0412 {
+                        winapi::um::winuser::VK_HANGUL as u32
+                    } else if code == 165 {
+                        // altgr
+                        165
+                    } else if scancode != 0 {
+                        unsafe { MapVirtualKeyExW(scancode as _, MAPVK_VSC_TO_VK_EX, layout) }
+                    } else {
+                        code
+                    };
+                    sim_keyboard_event(KEYEVENTF_KEYDOWN, code.try_into().unwrap(), 0)
+                }
             }
         }
         EventType::KeyRelease(key) => {
-            if let crate::Key::ScanCode(scancode) = key {
-                let scancode_lower = scancode & 0x00FF;
-                let flags = if scancode_lower == *scancode {
-                    KEYEVENTF_KEYUP | KEYEVENTF_SCANCODE
-                } else {
-                    KEYEVENTF_KEYUP | KEYEVENTF_EXTENDEDKEY | KEYEVENTF_SCANCODE
-                };
-                sim_keyboard_event(flags, 0, scancode_lower as _)
-            } else {
-                let (code, scancode) = get_win_codes(*key);
-                let code = if code == 165 {
-                    // altgr
-                    165
-                } else if scancode != 0 {
-                    unsafe {
-                        let current_window_thread_id =
-                            GetWindowThreadProcessId(GetForegroundWindow(), null_mut());
-                        let layout = GetKeyboardLayout(current_window_thread_id);
-                        MapVirtualKeyExW(scancode as _, MAPVK_VSC_TO_VK_EX, layout)
+            match key {
+                crate::Key::RawKey(rawkey) => {
+                    if let RawKey::ScanCode(scancode) = rawkey {
+                        let scancode_lower = scancode & 0x00FF;
+                        let flags = if scancode_lower == *scancode {
+                            KEYEVENTF_KEYUP | KEYEVENTF_SCANCODE
+                        } else {
+                            KEYEVENTF_KEYUP | KEYEVENTF_EXTENDEDKEY | KEYEVENTF_SCANCODE
+                        };
+                        sim_keyboard_event(flags, 0, scancode_lower as _)
+                    } else {
+                        Err(SimulateError)
                     }
-                } else {
-                    code
-                };
-                sim_keyboard_event(KEYEVENTF_KEYUP, code.try_into().unwrap(), 0)
+                }
+                _ => {
+                    let (code, scancode) = get_win_codes(*key);
+                    let code = if code == 165 {
+                        // altgr
+                        165
+                    } else if scancode != 0 {
+                        unsafe {
+                            let current_window_thread_id =
+                                GetWindowThreadProcessId(GetForegroundWindow(), null_mut());
+                            let layout = GetKeyboardLayout(current_window_thread_id);
+                            MapVirtualKeyExW(scancode as _, MAPVK_VSC_TO_VK_EX, layout)
+                        }
+                    } else {
+                        code
+                    };
+                    sim_keyboard_event(KEYEVENTF_KEYUP, code.try_into().unwrap(), 0)
+                }
             }
         }
         EventType::ButtonPress(button) => match button {

@@ -14,6 +14,7 @@ use std::{
     time::SystemTime,
 };
 use strum::IntoEnumIterator;
+#[cfg(target_os = "linux")]
 use x11::xlib::{self, Display, GrabModeAsync, KeyPressMask, XUngrabKey};
 
 const KEYPRESS_EVENT: i32 = 2;
@@ -40,12 +41,14 @@ fn convert_event(key: RdevKey, is_press: bool) -> Event {
     }
 }
 
+#[cfg(target_os = "linux")]
 fn ungrab_key(display: *mut Display, grab_window: u64, keycode: i32) {
     unsafe {
         XUngrabKey(display, keycode, MODIFIERS as _, grab_window);
     }
 }
 
+#[cfg(target_os = "linux")]
 fn ungrab_keys(display: *mut Display, grab_window: u64) {
     for key in RdevKey::iter() {
         let keycode: i32 = linux_keycode_from_key(key).unwrap_or_default() as _;
@@ -56,6 +59,7 @@ fn ungrab_keys(display: *mut Display, grab_window: u64) {
     }
 }
 
+#[cfg(target_os = "linux")]
 fn grab_key(display: *mut Display, grab_window: u64, keycode: i32) {
     unsafe {
         xlib::XGrabKey(
@@ -74,6 +78,7 @@ fn is_key_grabed(key: RdevKey) -> bool {
     GRABED.lock().unwrap().get(&key).is_some()
 }
 
+#[cfg(target_os = "linux")]
 fn grab_keys(display: *mut Display, grab_window: u64) {
     for key in RdevKey::iter() {
         let event = convert_event(key, true);
@@ -110,6 +115,7 @@ fn send_key(key: RdevKey, is_press: bool) {
     thread::sleep(delay);
 }
 
+#[cfg(target_os = "linux")]
 fn set_key_hook() {
     unsafe {
         let display = xlib::XOpenDisplay(ptr::null());
@@ -156,6 +162,7 @@ where
     unsafe {
         GLOBAL_CALLBACK = Some(Box::new(callback));
     }
+    #[cfg(target_os = "linux")]
     set_key_hook();
     Ok(())
 }
