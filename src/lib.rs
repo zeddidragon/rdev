@@ -227,11 +227,15 @@ mod linux;
 mod macos;
 mod windows;
 
+mod codes_conv;
+
+pub use crate::codes_conv::*;
+
 pub use crate::linux::code_from_key as linux_keycode_from_key;
 pub use crate::macos::code_from_key as macos_keycode_from_key;
 pub use crate::windows::{
     code_from_key as win_code_from_key, get_win_codes, get_win_key,
-    scancode_from_key as win_scancode_from_key,
+    key_from_scancode as win_key_from_scancode, scancode_from_key as win_scancode_from_key,
 };
 
 #[cfg(target_os = "macos")]
