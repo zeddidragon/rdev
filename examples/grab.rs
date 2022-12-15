@@ -1,15 +1,17 @@
+#[cfg(target_os = "linux")]
 use core::time::Duration;
 use rdev::Event;
 use rdev::EventType;
 #[cfg(target_os = "linux")]
 use rdev::{disable_grab, enable_grab, exit_grab_listen, start_grab_listen};
+#[cfg(target_os = "linux")]
 use std::thread;
 
 fn callback(event: Event) -> Option<Event> {
     match event.event_type {
         EventType::KeyPress(_key) | EventType::KeyRelease(_key) => {
             /*  */
-            println!("{:?}", &event);
+            println!("name: {:?}, type: {:?}, code: {:#04X?}, scan: {:#06X?}", &event.name, &event.event_type, &event.code, &event.scan_code);
             Some(event)
         }
         _ => Some(event),
