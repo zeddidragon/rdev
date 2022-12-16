@@ -1,22 +1,21 @@
 // This code is awful. Good luck
-use crate::{
-    key_from_scancode,
-    linux_keycode_from_key,
-    Event,
-    EventType,
-    GrabError,
-    Key as RdevKey,
-};
+use crate::{key_from_code, Event, EventType, GrabError};
+use log::error;
 use mio::unix::SourceFd;
-use mio::{ Events, Interest, Poll, Token };
+use mio::{Events, Interest, Poll, Token};
 use std::os::unix::net::UnixDatagram;
 use std::os::unix::prelude::AsRawFd;
 use std::path::Path;
 use std::ptr;
 use std::thread;
 use std::time::Duration;
-use std::{ mem::zeroed, os::raw::c_int, sync::{ mpsc::Sender, Arc, Mutex }, time::SystemTime };
-use x11::xlib::{ self, Display, GrabModeAsync, KeyPressMask, KeyReleaseMask };
+use std::{
+    mem::zeroed,
+    os::raw::c_int,
+    sync::{mpsc::Sender, Arc, Mutex},
+    time::SystemTime,
+};
+use x11::xlib::{self, Display, GrabModeAsync, KeyPressMask, KeyReleaseMask};
 
 #[derive(Debug)]
 pub struct MyDisplay(*mut xlib::Display);
@@ -30,7 +29,7 @@ lazy_static::lazy_static! {
 const KEYPRESS_EVENT: i32 = 2;
 
 pub static mut GLOBAL_CALLBACK: Option<Box<dyn FnMut(Event) -> Option<Event>>> = None;
-pub static FILE_PATH: &str = "/tmp/rdev_service.sock";
+static SOCK_FILE_PATH: &str = "/tmp/rdev_service.sock";
 const GRAB_RECV: Token = Token(0);
 const SERVICE_RECV: Token = Token(1);
 type Window = u64;
@@ -42,7 +41,8 @@ pub enum GrabEvent {
     KeyEvent(Event),
 }
 
-fn convert_event(key: RdevKey, is_press: bool) -> Event {
+fn convert_event(code: u32, is_press: bool) -> Event {
+    let key = key_from_code(code);
     Event {
         event_type: if is_press {
             EventType::KeyPress(key)
@@ -51,8 +51,8 @@ fn convert_event(key: RdevKey, is_press: bool) -> Event {
         },
         time: SystemTime::now(),
         name: None,
-        code: linux_keycode_from_key(key).unwrap_or_default() as _,
-        scan_code: linux_keycode_from_key(key).unwrap_or_default() as _,
+        code: code as _,
+        scan_code: 0,
     }
 }
 
@@ -64,7 +64,7 @@ fn grab_keys(display: *mut Display, grab_window: libc::c_ulong) {
             c_int::from(true),
             GrabModeAsync,
             GrabModeAsync,
-            xlib::CurrentTime
+            xlib::CurrentTime,
         );
         xlib::XFlush(display);
         thread::sleep(Duration::from_millis(50));
@@ -79,12 +79,12 @@ fn ungrab_keys(display: *mut Display) {
     }
 }
 
-fn send_to_client(grab: bool) {
-    let socket = UnixDatagram::unbound().unwrap();
-    if socket.connect(FILE_PATH).is_ok() {
-        let message = if grab { b"1" } else { b"0" };
-        socket.send(message).expect("[-] grab error in rdev: recv function failed");
-    }
+fn send_to_client(grab: bool) -> std::io::Result<()> {
+    let socket = UnixDatagram::unbound()?;
+    socket.connect(SOCK_FILE_PATH)?;
+    let message = if grab { b"1" } else { b"0" };
+    socket.send(message)?;
+    Ok(())
 }
 
 fn start_grab_service() -> Result<(), GrabError> {
@@ -93,24 +93,26 @@ fn start_grab_service() -> Result<(), GrabError> {
 
     start_grab_thread()?;
 
-    thread::spawn(move || {
-        loop {
-            if let Ok(data) = recv.recv() {
-                match data {
-                    GrabEvent::Grab => {
-                        send_to_client(true);
+    thread::spawn(move || loop {
+        if let Ok(data) = recv.recv() {
+            match data {
+                GrabEvent::Grab => {
+                    if let Err(e) = send_to_client(true) {
+                        error!("Failed to send grab command, {e}");
                     }
-                    GrabEvent::UnGrab => {
-                        send_to_client(false);
+                }
+                GrabEvent::UnGrab => {
+                    if let Err(e) = send_to_client(false) {
+                        error!("Failed to send ungrab command, {e}");
                     }
-                    GrabEvent::KeyEvent(event) => unsafe {
-                        if let Some(callback) = &mut GLOBAL_CALLBACK {
-                            callback(event);
-                        }
+                }
+                GrabEvent::KeyEvent(event) => unsafe {
+                    if let Some(callback) = &mut GLOBAL_CALLBACK {
+                        callback(event);
                     }
-                    GrabEvent::Exit => {
-                        break;
-                    }
+                },
+                GrabEvent::Exit => {
+                    break;
                 }
             }
         }
@@ -141,7 +143,7 @@ fn get_default_screen_number(display: &*mut xlib::Display) -> i32 {
 
 fn get_screen(
     display: &*mut xlib::Display,
-    screen_number: i32
+    screen_number: i32,
 ) -> Result<*mut xlib::Screen, GrabError> {
     let screen = unsafe { xlib::XScreenOfDisplay(*display, screen_number) };
     if screen.is_null() {
@@ -175,24 +177,23 @@ fn get_grab_fd(display: *mut xlib::Display) -> i32 {
 }
 
 fn get_socket() -> Result<UnixDatagram, GrabError> {
-    unlink_socket(FILE_PATH)?;
-    let socket = UnixDatagram::bind(FILE_PATH).map_err(GrabError::IoError)?;
-    socket.set_nonblocking(true).ok();
+    unlink_socket(SOCK_FILE_PATH)?;
+    let socket = UnixDatagram::bind(SOCK_FILE_PATH).map_err(GrabError::IoError)?;
+    socket.set_nonblocking(true).map_err(GrabError::IoError)?;
     Ok(socket)
 }
 
 fn create_poll_instance() -> Result<Poll, GrabError> {
-    Ok(Poll::new().map_err(GrabError::IoError).ok().unwrap())
+    Poll::new().map_err(GrabError::IoError)
 }
 
 fn poll_register_fd(
     poll: &Poll,
     source_fd: i32,
     token: Token,
-    interests: Interest
+    interests: Interest,
 ) -> Result<(), GrabError> {
-    poll
-        .registry()
+    poll.registry()
         .register(&mut SourceFd(&source_fd), token, interests)
         .map_err(GrabError::IoError)?;
     Ok(())
@@ -201,11 +202,13 @@ fn poll_register_fd(
 fn change_grab_state(
     socket: &UnixDatagram,
     display: *mut xlib::Display,
-    grab_window: Window
+    grab_window: Window,
 ) -> Result<(), GrabError> {
     // if recv "1"=> Ascii(49): grab key
     let mut buf = [0; 1];
-    socket.recv(buf.as_mut_slice()).map_err(GrabError::IoError)?;
+    socket
+        .recv(buf.as_mut_slice())
+        .map_err(GrabError::IoError)?;
     if buf[0] == 49 {
         grab_keys(display, grab_window);
     } else {
@@ -220,11 +223,8 @@ fn read_x_event(x_event: &mut xlib::XEvent, display: *mut xlib::Display) {
             xlib::XNextEvent(display, x_event);
         }
         let keycode = unsafe { x_event.key.keycode };
-        let event_type = unsafe { x_event.type_ };
-
-        let key = key_from_scancode(keycode);
-        let is_press = event_type == KEYPRESS_EVENT;
-        let event = convert_event(key, is_press);
+        let is_press = unsafe { x_event.type_ == KEYPRESS_EVENT };
+        let event = convert_event(keycode, is_press);
         if let Some(tx) = &*SENDER.lock().unwrap() {
             tx.send(GrabEvent::KeyEvent(event)).ok();
         }
@@ -292,7 +292,8 @@ pub fn disable_grab() {
 }
 
 pub fn start_grab_listen<T>(callback: T) -> Result<(), GrabError>
-    where T: FnMut(Event) -> Option<Event> + 'static
+where
+    T: FnMut(Event) -> Option<Event> + 'static,
 {
     unsafe {
         GLOBAL_CALLBACK = Some(Box::new(callback));

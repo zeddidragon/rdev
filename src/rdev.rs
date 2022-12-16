@@ -233,6 +233,22 @@ pub enum Key {
     Sleep,
     Separator,
     Unknown(u32),
+    RawKey(RawKey),
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, EnumIter)]
+#[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
+pub enum RawKey {
+    ScanCode(u32),
+    LinuxXorgKeycode(u32),
+    LinuxConsoleKeycode(u32),
+    MacVirtualKeycode(u32),
+}
+
+impl Default for RawKey {
+    fn default() -> Self {
+        Self::ScanCode(0)
+    }
 }
 
 /// Standard mouse buttons

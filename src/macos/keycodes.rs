@@ -5,14 +5,11 @@ macro_rules! decl_keycodes {
         //TODO: make const when rust lang issue #49146 is fixed
         pub fn code_from_key(key: Key) -> Option<u32> {
             match key {
-                // todo: Without Clear Key in MacOS.
-                Key::Clear => Some(0),
                 $(
                     Key::$key => Some($code),
                 )*
                 Key::Unknown(code) => Some(code as _),
-                // todo: keycode of KeyA value is 0
-                _ => Some(0),
+                _ => None,
             }
         }
 
@@ -25,18 +22,6 @@ macro_rules! decl_keycodes {
                 )*
                 _ => Key::Unknown(code as _)
             }
-        }
-
-        #[allow(dead_code)]
-        pub fn scancode_from_key(key:Key) -> Option<u32> {
-            // keycode
-            code_from_key(key)
-        }
-
-        #[allow(dead_code)]
-        pub fn key_from_scancode(scancode: u32) -> Key {
-            // keycode
-            key_from_code(scancode)
         }
     };
 }

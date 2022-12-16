@@ -1,23 +1,25 @@
+#[cfg(target_os = "linux")]
 use core::time;
-use rdev::{
-    key_from_scancode, linux_keycode_from_key, simulate, Event, EventType, GrabError,
-    Key as RdevKey,
-};
-pub static mut IS_GRAB: bool = false;
+#[cfg(target_os = "linux")]
+use rdev::{key_from_code, linux_keycode_from_key, simulate};
+use rdev::{Event, EventType, GrabError, Key as RdevKey};
+#[cfg(target_os = "linux")]
+use std::{collections::HashMap, mem::zeroed, os::raw::c_int, ptr, thread, time::SystemTime};
 use std::{
-    collections::{HashMap, HashSet},
-    mem::zeroed,
-    os::raw::c_int,
-    ptr,
+    collections::HashSet,
     sync::{mpsc::Sender, Arc, Mutex},
-    thread,
-    time::SystemTime,
 };
+#[cfg(target_os = "linux")]
 use strum::IntoEnumIterator;
+#[cfg(target_os = "linux")]
 use x11::xlib::{self, Display, GrabModeAsync, KeyPressMask, XUngrabKey};
 
+#[cfg(target_os = "linux")]
 const KEYPRESS_EVENT: i32 = 2;
+#[cfg(target_os = "linux")]
 const MODIFIERS: i32 = 0;
+
+pub static mut IS_GRAB: bool = false;
 
 static mut GLOBAL_CALLBACK: Option<Box<dyn FnMut(Event) -> Option<Event>>> = None;
 
@@ -26,6 +28,7 @@ lazy_static::lazy_static! {
     pub static ref BROADCAST_CONNECT: Arc<Mutex<Option<Sender<bool>>>> = Arc::new(Mutex::new(None));
 }
 
+#[cfg(target_os = "linux")]
 fn convert_event(key: RdevKey, is_press: bool) -> Event {
     Event {
         event_type: if is_press {
@@ -40,12 +43,14 @@ fn convert_event(key: RdevKey, is_press: bool) -> Event {
     }
 }
 
+#[cfg(target_os = "linux")]
 fn ungrab_key(display: *mut Display, grab_window: u64, keycode: i32) {
     unsafe {
         XUngrabKey(display, keycode, MODIFIERS as _, grab_window);
     }
 }
 
+#[cfg(target_os = "linux")]
 fn ungrab_keys(display: *mut Display, grab_window: u64) {
     for key in RdevKey::iter() {
         let keycode: i32 = linux_keycode_from_key(key).unwrap_or_default() as _;
@@ -56,6 +61,7 @@ fn ungrab_keys(display: *mut Display, grab_window: u64) {
     }
 }
 
+#[cfg(target_os = "linux")]
 fn grab_key(display: *mut Display, grab_window: u64, keycode: i32) {
     unsafe {
         xlib::XGrabKey(
@@ -70,10 +76,12 @@ fn grab_key(display: *mut Display, grab_window: u64, keycode: i32) {
     }
 }
 
+#[cfg(target_os = "linux")]
 fn is_key_grabed(key: RdevKey) -> bool {
     GRABED.lock().unwrap().get(&key).is_some()
 }
 
+#[cfg(target_os = "linux")]
 fn grab_keys(display: *mut Display, grab_window: u64) {
     for key in RdevKey::iter() {
         let event = convert_event(key, true);
@@ -93,6 +101,7 @@ fn grab_keys(display: *mut Display, grab_window: u64) {
     }
 }
 
+#[cfg(target_os = "linux")]
 fn send_key(key: RdevKey, is_press: bool) {
     let delay = time::Duration::from_millis(20);
     let event_type = if is_press {
@@ -110,6 +119,7 @@ fn send_key(key: RdevKey, is_press: bool) {
     thread::sleep(delay);
 }
 
+#[cfg(target_os = "linux")]
 fn set_key_hook() {
     unsafe {
         let display = xlib::XOpenDisplay(ptr::null());
@@ -132,7 +142,7 @@ fn set_key_hook() {
                         }
                         xlib::XNextEvent(display, &mut x_event);
 
-                        let key = key_from_scancode(x_event.key.keycode);
+                        let key = key_from_code(x_event.key.keycode);
                         let is_press = x_event.type_ == KEYPRESS_EVENT;
                         let event = convert_event(key, is_press);
 
@@ -156,6 +166,7 @@ where
     unsafe {
         GLOBAL_CALLBACK = Some(Box::new(callback));
     }
+    #[cfg(target_os = "linux")]
     set_key_hook();
     Ok(())
 }

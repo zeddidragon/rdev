@@ -34,6 +34,7 @@ pub enum CGEventTapOption {
 }
 
 pub static mut LAST_FLAGS: CGEventFlags = CGEventFlags::CGEventFlagNull;
+// to-do: try remove unwrap() here
 lazy_static! {
     pub static ref KEYBOARD_STATE: Mutex<Keyboard> = Mutex::new(Keyboard::new().unwrap());
 }
@@ -88,7 +89,7 @@ pub type QCallback = unsafe extern "C" fn(
 pub unsafe fn convert(
     _type: CGEventType,
     cg_event: &CGEvent,
-    keyboard_state: &mut Keyboard,
+    _keyboard_state: &mut Keyboard,
 ) -> Option<Event> {
     let mut code = 0;
     let option_type = match _type {
@@ -165,6 +166,7 @@ pub unsafe fn convert(
     None
 }
 
+#[allow(dead_code)]
 #[inline]
 fn key_to_name(key: Key) -> &'static str {
     use Key::*;

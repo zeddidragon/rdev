@@ -205,6 +205,7 @@ impl Keyboard {
 
         let len = buf.iter().position(|ch| ch == &0).unwrap_or(BUF_LEN);
 
+        // to-do: try remove unwrap() here
         // C0 controls
         if len == 1
             && matches!(

@@ -1,4 +1,4 @@
-use crate::rdev::{Button, EventType, SimulateError};
+use crate::rdev::{Button, EventType, SimulateError, RawKey};
 use core_graphics::event::{
     CGEvent, CGEventTapLocation, CGEventType, CGMouseButton, ScrollEventUnit,
 };
@@ -14,12 +14,34 @@ unsafe fn convert_native_with_source(
 ) -> Option<CGEvent> {
     match event_type {
         EventType::KeyPress(key) => {
-            let code = code_from_key(*key)?;
-            CGEvent::new_keyboard_event(source, code as _, true).ok()
+            match key {
+                crate::Key::RawKey(rawkey) => {
+                    if let RawKey::MacVirtualKeycode(keycode) = rawkey {
+                        CGEvent::new_keyboard_event(source, *keycode as _, true).ok()
+                    } else {
+                        return None;
+                    }
+                }
+                _ => {
+                    let code = code_from_key(*key)?;
+                    CGEvent::new_keyboard_event(source, code as _, true).ok()
+                }
+            }
         }
         EventType::KeyRelease(key) => {
-            let code = code_from_key(*key)?;
-            CGEvent::new_keyboard_event(source, code as _, false).ok()
+            match key {
+                crate::Key::RawKey(rawkey) => {
+                    if let RawKey::MacVirtualKeycode(keycode) = rawkey {
+                        CGEvent::new_keyboard_event(source, *keycode as _, false).ok()
+                    } else {
+                        return None;
+                    }
+                }
+                _ => {
+                    let code = code_from_key(*key)?;
+                    CGEvent::new_keyboard_event(source, code as _, false).ok()
+                }
+            }
         }
         EventType::ButtonPress(button) => {
             let point = get_current_mouse_location()?;

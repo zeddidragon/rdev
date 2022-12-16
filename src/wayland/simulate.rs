@@ -5,6 +5,8 @@ use uinput::event::*;
 use crate::rdev::Key as RdevKey;
 use uinput::event::keyboard::Key as EvdevKey;
 
+// to-do: try remove unwrap() here
+// use Option<Device> instead
 lazy_static::lazy_static! {
     pub static ref DEVICE: Mutex<Device> = Mutex::new(uinput::default().unwrap()
     .name("rustdesk").unwrap()
@@ -27,6 +29,7 @@ fn rdev_key_to_evdev_key(key: RdevKey) -> EvdevKey{
     }
 }
 
+// to-do: try remove unwrap() here
 pub fn simulate_wayland(event_type: &EventType) -> Result<(), SimulateError> {
     match event_type {
         EventType::KeyPress(key) => {

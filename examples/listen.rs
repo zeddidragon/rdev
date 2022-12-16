@@ -74,10 +74,10 @@ fn main() {
         let linux_keycode = rdev::linux_keycode_from_key(_key).unwrap();
         // Mac/Linux Numpad -> Windows ArrawKey
         // https://github.com/asur4s/rustdesk/blob/fe9923109092827f543560a7af42dff6c3135117/src/ui/remote.rs#L968
-        let windwos_keycode = rdev::win_keycode_from_key(_key).unwrap();
+        let win_scancode = rdev::win_scancode_from_key(_key).unwrap();
         let macos_keycode = rdev::macos_keycode_from_key(_key).unwrap();
         println!("Linux keycode {:?}", linux_keycode);
-        println!("Windows keycode {:?}", windwos_keycode);
+        println!("Windows scancode {:?}", win_scancode);
         println!("Mac OS keycode {:?}", macos_keycode);
 
         println!("--------------");

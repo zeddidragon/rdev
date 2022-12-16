@@ -87,6 +87,7 @@ impl Keyboard {
         }
     }
 
+    #[allow(dead_code)]
     #[inline]
     pub(crate) unsafe fn create_string_for_key(
         &mut self,
@@ -170,6 +171,7 @@ impl Keyboard {
         if length == 0 {
             return None;
         }
+        // to-do: try remove unwrap() here
         // C0 controls
         if length == 1
             && matches!(
