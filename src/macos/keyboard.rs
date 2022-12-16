@@ -87,6 +87,7 @@ impl Keyboard {
         }
     }
 
+    #[allow(dead_code)]
     #[inline]
     pub(crate) unsafe fn create_string_for_key(
         &mut self,
