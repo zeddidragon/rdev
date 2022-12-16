@@ -1,5 +1,6 @@
 // This code is awful. Good luck
 use crate::{key_from_code, Event, EventType, GrabError};
+use log::error;
 use mio::unix::SourceFd;
 use mio::{Events, Interest, Poll, Token};
 use std::os::unix::net::UnixDatagram;
@@ -28,7 +29,7 @@ lazy_static::lazy_static! {
 const KEYPRESS_EVENT: i32 = 2;
 
 pub static mut GLOBAL_CALLBACK: Option<Box<dyn FnMut(Event) -> Option<Event>>> = None;
-pub static FILE_PATH: &str = "/tmp/rdev_service.sock";
+static SOCK_FILE_PATH: &str = "/tmp/rdev_service.sock";
 const GRAB_RECV: Token = Token(0);
 const SERVICE_RECV: Token = Token(1);
 type Window = u64;
@@ -78,15 +79,12 @@ fn ungrab_keys(display: *mut Display) {
     }
 }
 
-// to-do: try remove unwrap() and expect() here
-fn send_to_client(grab: bool) {
-    let socket = UnixDatagram::unbound().unwrap();
-    if socket.connect(FILE_PATH).is_ok() {
-        let message = if grab { b"1" } else { b"0" };
-        socket
-            .send(message)
-            .expect("[-] grab error in rdev: recv function failed");
-    }
+fn send_to_client(grab: bool) -> std::io::Result<()> {
+    let socket = UnixDatagram::unbound()?;
+    socket.connect(SOCK_FILE_PATH)?;
+    let message = if grab { b"1" } else { b"0" };
+    socket.send(message)?;
+    Ok(())
 }
 
 fn start_grab_service() -> Result<(), GrabError> {
@@ -99,10 +97,14 @@ fn start_grab_service() -> Result<(), GrabError> {
         if let Ok(data) = recv.recv() {
             match data {
                 GrabEvent::Grab => {
-                    send_to_client(true);
+                    if let Err(e) = send_to_client(true) {
+                        error!("Failed to send grab command, {e}");
+                    }
                 }
                 GrabEvent::UnGrab => {
-                    send_to_client(false);
+                    if let Err(e) = send_to_client(false) {
+                        error!("Failed to send ungrab command, {e}");
+                    }
                 }
                 GrabEvent::KeyEvent(event) => unsafe {
                     if let Some(callback) = &mut GLOBAL_CALLBACK {
@@ -175,9 +177,9 @@ fn get_grab_fd(display: *mut xlib::Display) -> i32 {
 }
 
 fn get_socket() -> Result<UnixDatagram, GrabError> {
-    unlink_socket(FILE_PATH)?;
-    let socket = UnixDatagram::bind(FILE_PATH).map_err(GrabError::IoError)?;
-    socket.set_nonblocking(true).ok();
+    unlink_socket(SOCK_FILE_PATH)?;
+    let socket = UnixDatagram::bind(SOCK_FILE_PATH).map_err(GrabError::IoError)?;
+    socket.set_nonblocking(true).map_err(GrabError::IoError)?;
     Ok(socket)
 }
 
