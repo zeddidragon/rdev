@@ -6,9 +6,6 @@ macro_rules! decl_keycodes {
         //TODO: make const when rust lang issue #49146 is fixed
         pub fn code_from_key(key: Key) -> Option<u32> {
             match key {
-                // note: There is no KpReturn key in Windows
-                // Linux->Windows: Enter
-                Key::KpReturn => Some(13),
                 $(
                     Key::$key => Some($code),
                 )*
@@ -32,7 +29,6 @@ macro_rules! decl_keycodes {
                 $(
                     Key::$key => Some($scancode),
                 )*
-                Key::KpReturn => Some(0xE01C),
                 Key::Unknown(code) => Some(code as u32),
                 _ => None,
             }
@@ -42,7 +38,6 @@ macro_rules! decl_keycodes {
             #[allow(unreachable_patterns)]
             match scancode {
                 0 => Key::Unknown(0),
-                0xE01C => Key::KpReturn,
                 $(
                     $scancode => Key::$key,
                 )*
@@ -178,6 +173,7 @@ decl_keycodes! {
     KpMultiply, 106, 0x37,
     KpDivide, 111, 0xE035,
     KpDecimal, 110, 0x53,
+    KpReturn, 13, 0xE01C,
     Kp0, 96, 0x52,
     Kp1, 97, 0x4F,
     Kp2, 98, 0x50,
