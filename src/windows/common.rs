@@ -33,10 +33,17 @@ pub unsafe fn get_code(lpdata: LPARAM) -> DWORD {
 }
 pub unsafe fn get_scan_code(lpdata: LPARAM) -> DWORD {
     let kb = *(lpdata as *const KBDLLHOOKSTRUCT);
-    if (kb.flags & 0x01) == 0x01 {
-        0xE0 << 8 | kb.scanCode
-    } else {
-        kb.scanCode
+    // https://learn.microsoft.com/en-us/windows/win32/inputdev/about-keyboard-input#:~:text=The%20right%2Dhand%20SHIFT%20key%20is%20not%20considered%20an%20extended%2Dkey%2C%20it%20has%20a%20separate%20scan%20code%20instead.
+    // The right-hand SHIFT key is not considered an extended-key, it has a separate scan code instead.
+    match kb.scanCode {
+        0x36 | 0x45 => kb.scanCode,
+        _ => {
+            if (kb.flags & 0x01) == 0x01 {
+                0xE0 << 8 | kb.scanCode
+            } else {
+                kb.scanCode
+            }
+        }
     }
 }
 pub unsafe fn get_point(lpdata: LPARAM) -> (LONG, LONG) {

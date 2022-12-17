@@ -32,7 +32,8 @@ macro_rules! decl_keycodes {
                 $(
                     Key::$key => Some($scancode),
                 )*
-                Key::Unknown(code) => Some(code.try_into().ok()?),
+                Key::KpReturn => Some(0xE01C),
+                Key::Unknown(code) => Some(code as u32),
                 _ => None,
             }
         }
@@ -41,6 +42,7 @@ macro_rules! decl_keycodes {
             #[allow(unreachable_patterns)]
             match scancode {
                 0 => Key::Unknown(0),
+                0xE01C => Key::KpReturn,
                 $(
                     $scancode => Key::$key,
                 )*
@@ -116,12 +118,12 @@ decl_keycodes! {
     PageUp, 33, 0xE049,
     Return, 13, 0x1C,
     ShiftLeft, 160, 0x2A,
-    ShiftRight, 161, 0xE036,
+    ShiftRight, 161, 0x36,
     Space, 32, 0x39,
     Tab, 0x09, 0x0F,
     PrintScreen, 44, 0xE037,    // Note 4. Make: E0 2A  E0 37, Break E0 B7  E0 AA
     ScrollLock, 145, 0x46,
-    NumLock, 144, 0xE045,
+    NumLock, 144, 0x45,
     BackQuote, 192, 0x29,
     Num1, 49, 0x02,
     Num2, 50, 0x03,
@@ -182,7 +184,7 @@ decl_keycodes! {
     Kp3, 99, 0x51,
     Kp4, 100, 0x4B,
     Kp5, 101, 0x4C,
-    Kp6, 102, 0x4E,
+    Kp6, 102, 0x4D,
     Kp7, 103, 0x47,
     Kp8, 104, 0x48,
     Kp9, 105, 0x49,
