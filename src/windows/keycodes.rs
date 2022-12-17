@@ -32,7 +32,8 @@ macro_rules! decl_keycodes {
                 $(
                     Key::$key => Some($scancode),
                 )*
-                Key::Unknown(code) => Some(code.try_into().ok()?),
+                Key::KpReturn => Some(0xE01C),
+                Key::Unknown(code) => Some(code as u32),
                 _ => None,
             }
         }
@@ -41,6 +42,7 @@ macro_rules! decl_keycodes {
             #[allow(unreachable_patterns)]
             match scancode {
                 0 => Key::Unknown(0),
+                0xE01C => Key::KpReturn,
                 $(
                     $scancode => Key::$key,
                 )*
@@ -182,7 +184,7 @@ decl_keycodes! {
     Kp3, 99, 0x51,
     Kp4, 100, 0x4B,
     Kp5, 101, 0x4C,
-    Kp6, 102, 0x4E,
+    Kp6, 102, 0x4D,
     Kp7, 103, 0x47,
     Kp8, 104, 0x48,
     Kp9, 105, 0x49,
