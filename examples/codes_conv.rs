@@ -10,9 +10,9 @@ use std::thread;
 fn callback(event: Event) -> Option<Event> {
     match event.event_type {
         EventType::KeyPress(_key) | EventType::KeyRelease(_key) => {
-            let win_scancode;
-            let linux_keycode;
-            let macos_keycode;
+            let win_scancode: u32;
+            let linux_keycode: u32;
+            let macos_keycode: u32;
 
             #[cfg(target_os = "windows")]
             {
