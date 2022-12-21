@@ -9,7 +9,7 @@ macro_rules! decl_keycodes {
                 $(
                     Key::$key => Some($code),
                 )*
-                Key::Unknown(code) => Some(code.try_into().ok()?),
+                Key::Unknown(code) => Some(code as _),
                 _ => None,
             }
         }
@@ -20,7 +20,7 @@ macro_rules! decl_keycodes {
                 $(
                     $code => Key::$key,
                 )*
-                _ => Key::Unknown(code.into())
+                _ => Key::Unknown(code as _)
             }
         }
 
@@ -41,7 +41,7 @@ macro_rules! decl_keycodes {
                 $(
                     $scancode => Key::$key,
                 )*
-                _ => Key::Unknown(scancode.into())
+                _ => Key::Unknown(scancode as _)
             }
         }
 
@@ -156,7 +156,7 @@ decl_keycodes! {
     KeyL, 76, 0x26,
     SemiColon, 186,  0x27,
     Quote, 222, 0x28,
-    IntlBackslash, 226, 0x2B,
+    IntlBackslash, 226, 0x56,
     KeyZ, 90, 0x2C,
     KeyX, 88, 0x2D,
     KeyC, 67, 0x2E,
