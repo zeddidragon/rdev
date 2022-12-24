@@ -29,7 +29,6 @@ unsafe extern "C" fn raw_callback(
     cg_event
 }
 
-#[link(name = "Cocoa", kind = "framework")]
 pub fn listen<T>(callback: T) -> Result<(), ListenError>
 where
     T: FnMut(Event) + 'static,

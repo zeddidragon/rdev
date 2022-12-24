@@ -1,5 +1,4 @@
 use crate::rdev::Key;
-use std::convert::TryInto;
 
 macro_rules! decl_keycodes {
     ($($key:ident, $code:literal, $scancode:literal),*) => {
@@ -16,6 +15,7 @@ macro_rules! decl_keycodes {
 
         //TODO: make const when rust lang issue #49146 is fixed
         pub fn key_from_code(code: u32) -> Key {
+            #[allow(unreachable_patterns)]
             match code {
                 $(
                     $code => Key::$key,
@@ -107,6 +107,18 @@ decl_keycodes! {
     F10, 121, 0x44,
     F11, 122, 0x57,
     F12, 123, 0x58,
+    F13, 0x7C, 0x64,
+    F14, 0x7D, 0x65,
+    F15, 0x7E, 0x66,
+    F16, 0x7F, 0x67,
+    F17, 0x80, 0x68,
+    F18, 0x81, 0x69,
+    F19, 0x82, 0x6A,
+    F20, 0x83, 0x6B,
+    F21, 0x84, 0x6C,
+    F22, 0x85, 0x6D,
+    F23, 0x86, 0x6E,
+    F24, 0x87, 0x76,
     Home, 36, 0xE047,       // Note 1
     MetaLeft, 91, 0xE05B,
     PageDown, 34, 0xE051,   // Note 1
@@ -157,6 +169,9 @@ decl_keycodes! {
     SemiColon, 186,  0x27,
     Quote, 222, 0x28,
     IntlBackslash, 226, 0x56,
+    IntlRo, 0x0000, 0x73,
+    IntlYen, 0x0000, 0x7D,
+    KanaMode, 0x0000, 0x70,
     KeyZ, 90, 0x2C,
     KeyX, 88, 0x2D,
     KeyC, 67, 0x2E,
@@ -174,6 +189,8 @@ decl_keycodes! {
     KpDivide, 111, 0xE035,
     KpDecimal, 110, 0x53,
     KpReturn, 13, 0xE01C,
+    KpEqual, 0x0000, 0x59,
+    KpComma, 0x0000, 0x7E,
     Kp0, 96, 0x52,
     Kp1, 97, 0x4F,
     Kp2, 98, 0x50,
@@ -186,20 +203,29 @@ decl_keycodes! {
     Kp9, 105, 0x49,
     MetaRight, 92, 0xE05C,
     Apps, 93, 0xE05D,
-    Cancel, 0x03, 0,
-    Clear, 12, 0,
-    Kana, 0x15, 0,
-    Junja, 0x17, 0,
-    Final, 0x18, 0,
-    Hanja, 0x19, 0,
-    Convert, 0x1C, 0,
-    Select, 0x29, 0,
-    Print, 0x2A, 0,
-    Execute, 0x2B, 0,
-    Help, 0x2F, 0,
-    Sleep, 0x5F, 0,
-    Separator, 0x6C, 0,
-    Pause, 19, 0
+    VolumeUp, 0x0000, 0xE030,
+    VolumeDown, 0x0000, 0xE02E,
+    VolumeMute, 0x0000, 0xE020,
+    Lang1, 0x0000, 0x0072,
+    Lang2, 0x0000, 0x0071,
+    Lang3, 0x0000, 0x0078,
+    Lang4, 0x0000, 0x0077,
+    Lang5, 0x0000, 0x0000,
+    Cancel, 0x03, 0x0000,
+    Clear, 12, 0x0000,
+    Kana, 0x15, 0x0000,
+    Junja, 0x17, 0x0000,
+    Final, 0x18, 0x0000,
+    Hanja, 0x19, 0x0000,
+    Convert, 0x1C, 0x0079,
+    NonConvert, 0x0000, 0x007b,
+    Select, 0x29, 0x0000,
+    Print, 0x2A, 0x0000,
+    Execute, 0x2B, 0x0000,
+    Help, 0x2F, 0x0000,
+    Sleep, 0x5F, 0x0000,
+    Separator, 0x6C, 0x0000,
+    Pause, 19, 0x0000
 }
 
 #[cfg(test)]

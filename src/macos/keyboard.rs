@@ -54,7 +54,6 @@ extern "C" {
         actual_length: *mut UniCharCount,
         unicode_string: *mut [UniChar; BUF_LEN],
     ) -> OSStatus;
-    fn LMGetKbdType() -> u32;
     static kTISPropertyUnicodeKeyLayoutData: *mut c_void;
 
 }
@@ -145,7 +144,7 @@ impl Keyboard {
         // println!("{:?}", now.elapsed());
 
         let mut buff = [0_u16; BUF_LEN];
-        let kb_type = LMGetKbdType();
+        let kb_type = super::common::LMGetKbdType();
         let mut length = 0;
         let last_dead_state = self.dead_state;
         let _retval = UCKeyTranslate(
@@ -153,7 +152,7 @@ impl Keyboard {
             code.try_into().ok()?,
             kUCKeyActionDown,
             modifier_state,
-            kb_type,
+            kb_type as _,
             kUCKeyTranslateDeadKeysBit,
             &mut self.dead_state,
             BUF_LEN,
