@@ -141,6 +141,7 @@ pub fn map_keycode(code: u32) -> u32 {
     }
 }
 
+#[inline]
 unsafe fn get_code(cg_event: &CGEvent) -> Option<u32> {
     cg_event
         .get_integer_value_field(EventField::KEYBOARD_EVENT_KEYCODE)
