@@ -30,7 +30,6 @@ unsafe extern "C" fn raw_callback(
     cg_event
 }
 
-#[link(name = "Cocoa", kind = "framework")]
 pub fn grab<T>(callback: T) -> Result<(), GrabError>
 where
     T: FnMut(Event) -> Option<Event> + 'static,

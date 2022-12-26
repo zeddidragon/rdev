@@ -96,6 +96,8 @@ impl Display for SimulateError {
 
 impl std::error::Error for SimulateError {}
 
+// Some keys from https://github.com/chromium/chromium/blob/main/ui/events/keycodes/dom/dom_code_data.inc
+
 /// Key names based on physical location on the device
 /// Merge Option(MacOS) and Alt(Windows, Linux) into Alt
 /// Merge Windows (Windows), Meta(Linux), Command(MacOS) into Meta
@@ -123,6 +125,18 @@ pub enum Key {
     F10,
     F11,
     F12,
+    F13,
+    F14,
+    F15,
+    F16,
+    F17,
+    F18,
+    F19,
+    F20,
+    F21,
+    F22,
+    F23,
+    F24,
     F2,
     F3,
     F4,
@@ -188,6 +202,9 @@ pub enum Key {
     Quote,
     BackSlash,
     IntlBackslash,
+    IntlRo,         // Brazilian /? and Japanese _ 'ro'
+    IntlYen,        // Japanese Henkan (Convert) key.
+    KanaMode,       // Japanese Hiragana/Katakana key.
     KeyZ,
     KeyX,
     KeyC,
@@ -205,6 +222,8 @@ pub enum Key {
     KpMultiply,
     KpDivide,
     KpDecimal,
+    KpEqual,
+    KpComma,
     Kp0,
     Kp1,
     Kp2,
@@ -215,6 +234,14 @@ pub enum Key {
     Kp7,
     Kp8,
     Kp9,
+    VolumeUp,
+    VolumeDown,
+    VolumeMute,
+    Lang1,  // Korean Hangul/English toggle key, and as the Kana key on the Apple Japanese keyboard.
+    Lang2,  // Korean Hanja conversion key, and as the Eisu key on the Apple Japanese keyboard.
+    Lang3,  // Japanese Katakana key.
+    Lang4,  // Japanese Hiragana key.
+    Lang5,  // Japanese Zenkaku/Hankaku (Fullwidth/halfwidth) key.
     Function,
     Apps,
     Cancel,
@@ -225,13 +252,15 @@ pub enum Key {
     Final,
     Hanja,
     Hanji,
-    Convert,
+    Convert,    // Japanese Muhenkan (No-convert) key.
+    NonConvert, // Japanese Muhenkan (No-convert) key.
     Print,
     Select,
     Execute,
     Help,
     Sleep,
     Separator,
+    MacISOSection,  // Mac ISO keyboards only
     Unknown(u32),
     RawKey(RawKey),
 }
