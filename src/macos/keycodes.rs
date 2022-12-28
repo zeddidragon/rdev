@@ -41,7 +41,7 @@ decl_keycodes!(
     KeyX, kVK_ANSI_X,
     KeyC, kVK_ANSI_C,
     KeyV, kVK_ANSI_V,
-    MacISOSection, kVK_ISO_Section,
+    IntlBackslash, kVK_ISO_Section,
     KeyB, kVK_ANSI_B,
     KeyQ, kVK_ANSI_Q,
     KeyW, kVK_ANSI_W,

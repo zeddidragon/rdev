@@ -260,7 +260,6 @@ pub enum Key {
     Help,
     Sleep,
     Separator,
-    MacISOSection,  // Mac ISO keyboards only
     Unknown(u32),
     RawKey(RawKey),
 }
