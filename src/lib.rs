@@ -243,6 +243,8 @@ pub use crate::windows::{
 use crate::macos::{display_size as _display_size, listen as _listen, simulate as _simulate};
 #[cfg(target_os = "macos")]
 pub use crate::macos::{key_from_code, Keyboard, VirtualInput};
+#[cfg(target_os = "macos")]
+pub use core_graphics::{event::CGEventTapLocation, event_source::CGEventSourceStateID};
 
 #[cfg(any(target_os = "android", target_os = "linux"))]
 pub use crate::linux::key_from_code;
