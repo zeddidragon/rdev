@@ -242,7 +242,7 @@ pub use crate::windows::{
 #[cfg(target_os = "macos")]
 use crate::macos::{display_size as _display_size, listen as _listen, simulate as _simulate};
 #[cfg(target_os = "macos")]
-pub use crate::macos::{key_from_code, Keyboard};
+pub use crate::macos::{key_from_code, Keyboard, VirtualInput};
 
 #[cfg(any(target_os = "android", target_os = "linux"))]
 pub use crate::linux::key_from_code;

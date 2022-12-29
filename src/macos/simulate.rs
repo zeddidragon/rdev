@@ -135,3 +135,28 @@ pub fn simulate(event_type: &EventType) -> Result<(), SimulateError> {
         }
     }
 }
+
+pub struct VirtualInput {
+    source: CGEventSource,
+    tap_loc: CGEventTapLocation,
+}
+
+impl VirtualInput {
+    pub fn new(state_id: CGEventSourceStateID, tab_loc: CGEventTapLocation) -> Result<Self, ()> {
+        Ok(Self {
+            source: CGEventSource::new(state_id)?,
+            tap_loc: tab_loc,
+        })
+    }
+
+    pub fn simulate(&self, event_type: &EventType) -> Result<(), SimulateError> {
+        unsafe {
+            if let Some(cg_event) = convert_native_with_source(event_type, self.source.clone()) {
+                cg_event.post(self.tap_loc);
+                Ok(())
+            } else {
+                Err(SimulateError)
+            }
+        }
+    }
+}

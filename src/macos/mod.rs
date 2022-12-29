@@ -6,11 +6,11 @@ mod display;
 mod grab;
 #[cfg(target_os = "macos")]
 mod keyboard;
+mod keycodes;
 #[cfg(target_os = "macos")]
 mod listen;
 #[cfg(target_os = "macos")]
 mod simulate;
-mod keycodes;
 pub mod virtual_keycodes;
 
 #[cfg(target_os = "macos")]
@@ -21,8 +21,8 @@ pub use crate::macos::display::display_size;
 pub use crate::macos::grab::grab;
 #[cfg(target_os = "macos")]
 pub use crate::macos::keyboard::Keyboard;
+pub use crate::macos::keycodes::*;
 #[cfg(target_os = "macos")]
 pub use crate::macos::listen::listen;
 #[cfg(target_os = "macos")]
-pub use crate::macos::simulate::simulate;
-pub use crate::macos::keycodes::*;
+pub use crate::macos::simulate::{simulate, VirtualInput};
