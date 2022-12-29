@@ -1,48 +1,68 @@
-use crate::rdev::{Button, EventType, SimulateError, RawKey};
-use core_graphics::event::{
-    CGEvent, CGEventTapLocation, CGEventType, CGMouseButton, ScrollEventUnit,
+use super::virtual_keycodes::{
+    kVK_End, kVK_ForwardDelete, kVK_Help, kVK_Home, kVK_PageDown, kVK_PageUp,
 };
-use core_graphics::event_source::{CGEventSource, CGEventSourceStateID};
-use core_graphics::geometry::CGPoint;
+use crate::macos::keycodes::code_from_key;
+use crate::rdev::{Button, EventType, RawKey, SimulateError};
+use core_graphics::{
+    event::{
+        CGEvent, CGEventFlags, CGEventTapLocation, CGEventType, CGMouseButton, ScrollEventUnit,
+    },
+    event_source::{CGEventSource, CGEventSourceStateID},
+    geometry::CGPoint,
+};
 use std::convert::TryInto;
 
-use crate::macos::keycodes::code_from_key;
+#[allow(non_upper_case_globals)]
+fn workaround_fn(event: CGEvent, keycode: u32) -> CGEvent {
+    match keycode {
+        kVK_Help | kVK_ForwardDelete | kVK_Home | kVK_End | kVK_PageDown | kVK_PageUp => {
+            let flags = event.get_flags();
+            event.set_flags(flags & (!(CGEventFlags::CGEventFlagSecondaryFn)));
+        }
+        _ => {}
+    }
+    event
+}
 
 unsafe fn convert_native_with_source(
     event_type: &EventType,
     source: CGEventSource,
 ) -> Option<CGEvent> {
     match event_type {
-        EventType::KeyPress(key) => {
-            match key {
-                crate::Key::RawKey(rawkey) => {
-                    if let RawKey::MacVirtualKeycode(keycode) = rawkey {
-                        CGEvent::new_keyboard_event(source, *keycode as _, true).ok()
-                    } else {
-                        return None;
-                    }
-                }
-                _ => {
-                    let code = code_from_key(*key)?;
-                    CGEvent::new_keyboard_event(source, code as _, true).ok()
+        EventType::KeyPress(key) => match key {
+            crate::Key::RawKey(rawkey) => {
+                if let RawKey::MacVirtualKeycode(keycode) = rawkey {
+                    CGEvent::new_keyboard_event(source, *keycode as _, true)
+                        .and_then(|event| Ok(workaround_fn(event, *keycode)))
+                        .ok()
+                } else {
+                    None
                 }
             }
-        }
-        EventType::KeyRelease(key) => {
-            match key {
-                crate::Key::RawKey(rawkey) => {
-                    if let RawKey::MacVirtualKeycode(keycode) = rawkey {
-                        CGEvent::new_keyboard_event(source, *keycode as _, false).ok()
-                    } else {
-                        return None;
-                    }
-                }
-                _ => {
-                    let code = code_from_key(*key)?;
-                    CGEvent::new_keyboard_event(source, code as _, false).ok()
+            _ => {
+                let code = code_from_key(*key)?;
+                CGEvent::new_keyboard_event(source, code as _, true)
+                    .and_then(|event| Ok(workaround_fn(event, code as _)))
+                    .ok()
+            }
+        },
+        EventType::KeyRelease(key) => match key {
+            crate::Key::RawKey(rawkey) => {
+                if let RawKey::MacVirtualKeycode(keycode) = rawkey {
+                    CGEvent::new_keyboard_event(source, *keycode as _, false)
+                        .and_then(|event| Ok(workaround_fn(event, *keycode)))
+                        .ok()
+                } else {
+                    None
                 }
             }
-        }
+            _ => {
+                let code = code_from_key(*key)?;
+                CGEvent::new_keyboard_event(source, code as _, false)
+                    .and_then(|event| Ok(workaround_fn(event, code as _)))
+                    .ok()
+            }
+        },
         EventType::ButtonPress(button) => {
             let point = get_current_mouse_location()?;
             let event = match button {
@@ -94,6 +114,7 @@ unsafe fn convert_native_with_source(
 }
 
 unsafe fn convert_native(event_type: &EventType) -> Option<CGEvent> {
+    // https://developer.apple.com/documentation/coregraphics/cgeventsourcestateid#:~:text=kCGEventSourceStatePrivate
     let source = CGEventSource::new(CGEventSourceStateID::HIDSystemState).ok()?;
     convert_native_with_source(event_type, source)
 }
