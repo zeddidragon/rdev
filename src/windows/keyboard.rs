@@ -46,7 +46,9 @@ impl Keyboard {
         let mut state = [0_u8; 256];
         let state_ptr = state.as_mut_ptr();
 
-        let _shift = GetKeyState(VK_SHIFT);
+        // to-do: Comment out the following line to fix https://github.com/rustdesk/rustdesk/issues/2670.
+        // But I'm not sure why `GetKeyState` is here.
+        // let _shift = GetKeyState(VK_SHIFT);
         let current_window_thread_id = GetWindowThreadProcessId(GetForegroundWindow(), null_mut());
         let thread_id = GetCurrentThreadId();
         // Attach to active thread so we can get that keyboard state
@@ -109,19 +111,17 @@ impl Keyboard {
         }
         self.last_is_dead = is_dead;
 
-        // to-do: try remove unwrap() here
         // C0 controls
         if len == 1
             && matches!(
                 String::from_utf16(&buff[..len as usize])
-                    .unwrap()
+                    .ok()?
                     .chars()
-                    .next()
-                    .unwrap(),
+                    .next()?,
                 '\u{1}'..='\u{1f}'
             )
         {
-            return Some("".to_string());
+            return None;
         }
         result
     }
