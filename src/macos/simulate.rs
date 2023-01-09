@@ -1,5 +1,6 @@
 use super::virtual_keycodes::{
-    kVK_End, kVK_ForwardDelete, kVK_Help, kVK_Home, kVK_PageDown, kVK_PageUp,
+    kVK_DownArrow, kVK_End, kVK_ForwardDelete, kVK_Help, kVK_Home, kVK_LeftArrow, kVK_PageDown,
+    kVK_PageUp, kVK_RightArrow, kVK_UpArrow,
 };
 use crate::macos::keycodes::code_from_key;
 use crate::rdev::{Button, EventType, RawKey, SimulateError};
@@ -18,6 +19,10 @@ fn workaround_fn(event: CGEvent, keycode: u32) -> CGEvent {
         kVK_Help | kVK_ForwardDelete | kVK_Home | kVK_End | kVK_PageDown | kVK_PageUp => {
             let flags = event.get_flags();
             event.set_flags(flags & (!(CGEventFlags::CGEventFlagSecondaryFn)));
+        }
+        kVK_UpArrow | kVK_DownArrow | kVK_LeftArrow | kVK_RightArrow => {
+            let flags = event.get_flags();
+            event.set_flags(flags & (!(CGEventFlags::CGEventFlagSecondaryFn | CGEventFlags::CGEventFlagNumericPad)));
         }
         _ => {}
     }
