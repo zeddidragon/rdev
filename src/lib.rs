@@ -348,6 +348,8 @@ pub use crate::windows::grab as _grab;
 pub use crate::windows::set_dw_keyboard_extra_info;
 #[cfg(target_os = "windows")]
 pub use crate::windows::set_dw_mouse_extra_info;
+#[cfg(target_os = "windows")]
+pub use crate::windows::set_get_key_name;
 
 /// Grabbing global events. In the callback, returning None ignores the event
 /// and returning the event let's it pass. There is no modification of the event

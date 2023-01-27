@@ -78,6 +78,12 @@ impl Keyboard {
         let mut buff = [0_u16; BUF_LEN as usize];
         let buff_ptr = buff.as_mut_ptr();
         let layout = GetKeyboardLayout(current_window_thread_id);
+        // https://github.com/rustdesk/rustdesk/issues/2670
+        // https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-tounicodeex
+        // For Portuguese (Brazil) layout,
+        // Shift + [ returns -1. (`)
+        // Shift + ' returns -1. (^)
+        // Shift + 6 does not return -1(dead code)(¨).
         let len = ToUnicodeEx(code, scan_code, state_ptr, buff_ptr, 8 - 1, 0, layout);
         let mut is_dead = false;
         let result = match len {
@@ -107,7 +113,7 @@ impl Keyboard {
             self.last_code = 0;
         } else {
             self.last_code = code;
-            self.last_scan_code = scan_code;  
+            self.last_scan_code = scan_code;
         }
         self.last_is_dead = is_dead;
 
