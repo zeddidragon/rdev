@@ -46,9 +46,12 @@ impl Keyboard {
         let mut state = [0_u8; 256];
         let state_ptr = state.as_mut_ptr();
 
-        // to-do: Comment out the following line to fix https://github.com/rustdesk/rustdesk/issues/2670.
-        // But I'm not sure why `GetKeyState` is here.
-        // let _shift = GetKeyState(VK_SHIFT);
+        // to-do
+        // GetKeyState should be called before GetKeyboardState.
+        // https://stackoverflow.com/questions/45719020/winapi-getkeyboardstate-behavior-modified-by-getkeystate-when-application-is-out
+        // But this causing accents errors. Typing ö turns out ô.
+        // https://github.com/rustdesk/rustdesk/issues/2670
+        let _shift = GetKeyState(VK_SHIFT);
         let current_window_thread_id = GetWindowThreadProcessId(GetForegroundWindow(), null_mut());
         let thread_id = GetCurrentThreadId();
         // Attach to active thread so we can get that keyboard state
