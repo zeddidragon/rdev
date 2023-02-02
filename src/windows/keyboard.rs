@@ -32,14 +32,14 @@ impl Keyboard {
         })
     }
 
-    pub(crate) unsafe fn get_name(&mut self, lpdata: LPARAM) -> Option<String> {
+    pub(crate) unsafe fn get_name_unicode(&mut self, lpdata: LPARAM) -> Option<(Option<String>, Vec<u16>)> {
         // https://gist.github.com/akimsko/2011327
         // https://www.experts-exchange.com/questions/23453780/LowLevel-Keystroke-Hook-removes-Accents-on-French-Keyboard.html
         let code = get_code(lpdata);
         let scan_code = get_scan_code(lpdata);
 
         self.set_global_state()?;
-        self.get_code_name(code, scan_code)
+        self.get_code_name_unicode(code, scan_code)
     }
 
     pub(crate) unsafe fn set_global_state(&mut self) -> Option<()> {
@@ -74,7 +74,7 @@ impl Keyboard {
         Some(())
     }
 
-    pub(crate) unsafe fn get_code_name(&mut self, code: UINT, scan_code: UINT) -> Option<String> {
+    pub(crate) unsafe fn get_code_name_unicode(&mut self, code: UINT, scan_code: UINT) -> Option<(Option<String>, Vec<u16>)> {
         let current_window_thread_id = GetWindowThreadProcessId(GetForegroundWindow(), null_mut());
         let state_ptr = self.last_state.as_mut_ptr();
         const BUF_LEN: i32 = 32;
@@ -96,7 +96,10 @@ impl Keyboard {
                 self.clear_keyboard_buffer(code, scan_code, layout);
                 None
             }
-            len if len > 0 => String::from_utf16(&buff[..len as usize]).ok(),
+            len if len > 0 => {
+                let unicode = buff[..len as usize].to_vec();
+                Some((String::from_utf16(&unicode).ok(), unicode))
+            },
             _ => None,
         };
 
@@ -180,10 +183,10 @@ impl KeyboardState for Keyboard {
                         // If control is pressed, global state cannot be used, otherwise no character will be generated.
                         // note: AltGR => ControlLeft + AltGR
                         if _control < 0 && _altgr >= 0 {
-                            self.get_code_name(code as _, scan_code)
+                            self.get_code_name_unicode(code as _, scan_code)?.0
                         } else {
                             self.set_global_state()?;
-                            self.get_code_name(code, scan_code)
+                            self.get_code_name_unicode(code, scan_code)?.0
                         }
                     }
                 }

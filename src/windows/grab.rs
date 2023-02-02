@@ -19,10 +19,10 @@ unsafe extern "system" fn raw_callback(code: i32, param: usize, lpdata: isize) -
     if code == HC_ACTION {
         let (opt, code) = convert(param, lpdata);
         if let Some(event_type) = opt {
-            let name = if GET_KEY_NAME {
+            let name_unicode = if GET_KEY_NAME {
                 match &event_type {
                     EventType::KeyPress(_key) => match (*KEYBOARD).lock() {
-                        Ok(mut keyboard) => keyboard.get_name(lpdata),
+                        Ok(mut keyboard) => keyboard.get_name_unicode(lpdata),
                         Err(_) => None,
                     },
                     _ => None,
@@ -33,7 +33,8 @@ unsafe extern "system" fn raw_callback(code: i32, param: usize, lpdata: isize) -
             let event = Event {
                 event_type,
                 time: SystemTime::now(),
-                name,
+                name: name_unicode.as_ref().and_then(|x|x.0.clone()),
+                unicode: name_unicode.map(|x|x.1).unwrap_or_default(),
                 code,
                 scan_code: get_scan_code(lpdata),
             };

@@ -331,6 +331,7 @@ pub enum EventType {
 pub struct Event {
     pub time: SystemTime,
     pub name: Option<String>,
+    pub unicode: Vec<u16>,
     pub event_type: EventType,
     pub code: u16,
     pub scan_code: u32,

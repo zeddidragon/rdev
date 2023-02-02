@@ -13,14 +13,11 @@ use winapi::um::winuser::{
     MOUSEEVENTF_ABSOLUTE, MOUSEEVENTF_HWHEEL, MOUSEEVENTF_LEFTDOWN, MOUSEEVENTF_LEFTUP,
     MOUSEEVENTF_MIDDLEDOWN, MOUSEEVENTF_MIDDLEUP, MOUSEEVENTF_MOVE, MOUSEEVENTF_RIGHTDOWN,
     MOUSEEVENTF_RIGHTUP, MOUSEEVENTF_VIRTUALDESK, MOUSEEVENTF_WHEEL, MOUSEEVENTF_XDOWN,
-    MOUSEEVENTF_XUP, MOUSEINPUT, SM_CXVIRTUALSCREEN, SM_CYVIRTUALSCREEN, WHEEL_DELTA,
+    MOUSEEVENTF_XUP, MOUSEINPUT, SM_CXVIRTUALSCREEN, SM_CYVIRTUALSCREEN, WHEEL_DELTA,KEYEVENTF_UNICODE,
 };
 /// Not defined in win32 but define here for clarity
 static KEYEVENTF_KEYDOWN: DWORD = 0;
 // KEYBDINPUT
-static KEYUP: u16 = 0x0002;
-static KEYDOWN: u16 = 0;
-static UNICODE: u16 = 0x0004;
 static mut DW_MOUSE_EXTRA_INFO: usize = 0;
 static mut DW_KEYBOARD_EXTRA_INFO: usize = 0;
 
@@ -220,9 +217,14 @@ pub fn simulate_char(chr: char, pressed: bool) -> Result<(), SimulateError> {
     let (vk, scan, flags): (i32, u16, u16) = if (res >> 8) & 0xFF == 0 {
         ((res & 0xFF).into(), 0, 0)
     } else {
-        (0, chr as _, UNICODE)
+        (0, chr as _, KEYEVENTF_UNICODE as _)
     };
 
-    let state_flags = if pressed { KEYDOWN } else { KEYUP };
+    let state_flags = if pressed { 0 } else { KEYEVENTF_KEYUP as _ };
     sim_keyboard_event((flags | state_flags).into(), vk as _, scan)
+}
+
+pub fn simulate_unicode(unicode: u16) -> Result<(), SimulateError> {
+    sim_keyboard_event(KEYEVENTF_UNICODE, 0, unicode)?;
+    sim_keyboard_event(KEYEVENTF_UNICODE | KEYEVENTF_KEYUP, 0, unicode)
 }
