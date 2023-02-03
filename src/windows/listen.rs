@@ -26,8 +26,7 @@ unsafe extern "system" fn raw_callback(code: c_int, param: WPARAM, lpdata: LPARA
             let event = Event {
                 event_type,
                 time: SystemTime::now(),
-                name: None,
-                unicode: Vec::new(),
+                unicode: None,
                 code,
                 scan_code: get_scan_code(lpdata),
             };

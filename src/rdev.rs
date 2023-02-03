@@ -320,6 +320,14 @@ pub enum EventType {
     },
 }
 
+/// The Unicode information of input.
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct UnicodeInfo {
+    pub name: Option<String>,
+    pub unicode: Vec<u16>,
+    pub is_dead: bool,
+}
+
 /// When events arrive from the OS they get some additional information added from
 /// EventType, which is the time when this event was received, and the name Option
 /// which contains what characters should be emmitted from that event. This relies
@@ -330,8 +338,7 @@ pub enum EventType {
 #[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 pub struct Event {
     pub time: SystemTime,
-    pub name: Option<String>,
-    pub unicode: Vec<u16>,
+    pub unicode: Option<UnicodeInfo>,
     pub event_type: EventType,
     pub code: u16,
     pub scan_code: u32,

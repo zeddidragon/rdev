@@ -1,4 +1,4 @@
-use crate::rdev::{EventType, Key, KeyboardState};
+use crate::rdev::{EventType, Key, KeyboardState, UnicodeInfo};
 use crate::windows::common::{get_code, get_scan_code, FALSE, TRUE};
 use std::ptr::null_mut;
 use winapi::shared::minwindef::{BYTE, HKL, LPARAM, UINT};
@@ -32,7 +32,7 @@ impl Keyboard {
         })
     }
 
-    pub(crate) unsafe fn get_name_unicode(&mut self, lpdata: LPARAM) -> Option<(Option<String>, Vec<u16>)> {
+    pub(crate) unsafe fn get_unicode(&mut self, lpdata: LPARAM) -> Option<UnicodeInfo> {
         // https://gist.github.com/akimsko/2011327
         // https://www.experts-exchange.com/questions/23453780/LowLevel-Keystroke-Hook-removes-Accents-on-French-Keyboard.html
         let code = get_code(lpdata);
@@ -74,7 +74,7 @@ impl Keyboard {
         Some(())
     }
 
-    pub(crate) unsafe fn get_code_name_unicode(&mut self, code: UINT, scan_code: UINT) -> Option<(Option<String>, Vec<u16>)> {
+    pub(crate) unsafe fn get_code_name_unicode(&mut self, code: UINT, scan_code: UINT) -> Option<UnicodeInfo> {
         let current_window_thread_id = GetWindowThreadProcessId(GetForegroundWindow(), null_mut());
         let state_ptr = self.last_state.as_mut_ptr();
         const BUF_LEN: i32 = 32;
@@ -94,11 +94,19 @@ impl Keyboard {
             -1 => {
                 is_dead = true;
                 self.clear_keyboard_buffer(code, scan_code, layout);
-                None
+                Some(UnicodeInfo{
+                    name: None,
+                    unicode: Vec::new(),
+                    is_dead: true,
+                })
             }
             len if len > 0 => {
                 let unicode = buff[..len as usize].to_vec();
-                Some((String::from_utf16(&unicode).ok(), unicode))
+                Some(UnicodeInfo{
+                    name: String::from_utf16(&unicode).ok(),
+                    unicode,
+                    is_dead: false,
+                })
             },
             _ => None,
         };
@@ -183,10 +191,10 @@ impl KeyboardState for Keyboard {
                         // If control is pressed, global state cannot be used, otherwise no character will be generated.
                         // note: AltGR => ControlLeft + AltGR
                         if _control < 0 && _altgr >= 0 {
-                            self.get_code_name_unicode(code as _, scan_code)?.0
+                            self.get_code_name_unicode(code as _, scan_code)?.name
                         } else {
                             self.set_global_state()?;
-                            self.get_code_name_unicode(code, scan_code)?.0
+                            self.get_code_name_unicode(code, scan_code)?.name
                         }
                     }
                 }
