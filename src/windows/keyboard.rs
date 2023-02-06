@@ -165,7 +165,7 @@ impl Keyboard {
 }
 
 impl KeyboardState for Keyboard {
-    fn add(&mut self, event_type: &EventType) -> Option<String> {
+    fn add(&mut self, event_type: &EventType) -> Option<UnicodeInfo> {
         match event_type {
             EventType::KeyPress(key) => match key {
                 Key::ShiftLeft => {
@@ -191,10 +191,10 @@ impl KeyboardState for Keyboard {
                         // If control is pressed, global state cannot be used, otherwise no character will be generated.
                         // note: AltGR => ControlLeft + AltGR
                         if _control < 0 && _altgr >= 0 {
-                            self.get_code_name_unicode(code as _, scan_code)?.name
+                            self.get_code_name_unicode(code as _, scan_code)
                         } else {
                             self.set_global_state()?;
-                            self.get_code_name_unicode(code, scan_code)?.name
+                            self.get_code_name_unicode(code, scan_code)
                         }
                     }
                 }

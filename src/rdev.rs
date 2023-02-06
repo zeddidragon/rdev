@@ -357,7 +357,7 @@ pub struct Event {
 /// use rdev::{Keyboard, EventType, Key, KeyboardState};
 ///
 /// let mut keyboard = Keyboard::new().unwrap();
-/// let string = keyboard.add(&EventType::KeyPress(Key::KeyS));
+/// let string = keyboard.add(&EventType::KeyPress(Key::KeyS)).unwrap().name.unwrap();
 /// // string == Some("s")
 /// ```
 pub trait KeyboardState {
