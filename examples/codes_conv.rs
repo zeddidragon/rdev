@@ -33,7 +33,7 @@ fn callback(event: Event) -> Option<Event> {
                 linux_keycode = event.code as _;
             };
 
-            println!("name: {:?}, type: {:?}, code: {:#04X?}, scan: {:#06X?}", &event.name, &event.event_type, &event.code, &event.scan_code);
+            println!("name: {:?}, type: {:?}, code: {:#04X?}, scan: {:#06X?}", &event.unicode, &event.event_type, &event.code, &event.scan_code);
             println!("win: {:#06X?}, linux: {:#06X?}, macos: {:#06X?}", win_scancode, linux_keycode, macos_keycode);
 
             Some(event)
