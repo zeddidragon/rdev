@@ -157,6 +157,6 @@ pub fn simulate_char(chr: char, pressed: bool) -> Result<(), SimulateError> {
     }
 }
 
-pub fn simulate_unicode(unicode: u16) -> Result<(), SimulateError> {
+pub fn simulate_unicode(_unicode: u16) -> Result<(), SimulateError> {
     Err(SimulateError)
 }

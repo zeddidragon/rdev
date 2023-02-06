@@ -62,11 +62,11 @@ pub fn convert(
 ) -> Option<Event> {
     let event_type = convert_event(code as c_uchar, type_, x, y)?;
     let kb: &mut Keyboard = (*keyboard).as_mut()?;
-    let name = kb.add(&event_type);
+    let unicode = kb.add(&event_type);
     Some(Event {
         event_type,
         time: SystemTime::now(),
-        name,
+        unicode,
         code: code as _,
         scan_code: code as _,
     })

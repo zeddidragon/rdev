@@ -1,6 +1,6 @@
 extern crate x11;
 use crate::linux::keycodes::code_from_key;
-use crate::rdev::{EventType, KeyboardState};
+use crate::rdev::{EventType, KeyboardState, UnicodeInfo};
 use std::ffi::{CStr, CString};
 use std::os::raw::{c_char, c_int, c_uint, c_ulong, c_void};
 use std::ptr::{null, null_mut, NonNull};
@@ -148,11 +148,11 @@ impl Keyboard {
         Some(mask_return)
     }
 
-    pub(crate) unsafe fn name_from_code(
+    pub(crate) unsafe fn unicode_from_code(
         &mut self,
         keycode: c_uint,
         state: c_uint,
-    ) -> Option<String> {
+    ) -> Option<UnicodeInfo> {
         let MyDisplay(display) = *self.display;
         let MyXIC(xic) = *self.xic;
         if display.is_null() || xic.is_null() {
@@ -220,7 +220,11 @@ impl Keyboard {
             return None;
         }
 
-        String::from_utf8(buf[..len].to_vec()).ok()
+        Some(UnicodeInfo{
+            name: String::from_utf8(buf[..len].to_vec()).ok(),
+            unicode: Vec::new(),
+            is_dead: false,
+        })
     }
 
     pub fn is_dead(&mut self) -> bool {
@@ -235,7 +239,7 @@ impl Keyboard {
 }
 
 impl KeyboardState for Keyboard {
-    fn add(&mut self, event_type: &EventType) -> Option<String> {
+    fn add(&mut self, event_type: &EventType) -> Option<UnicodeInfo> {
         match event_type {
             EventType::KeyPress(key) => {
                 let keycode = code_from_key(*key)?;
@@ -243,7 +247,7 @@ impl KeyboardState for Keyboard {
                 let state = unsafe { self.get_current_modifiers().unwrap_or_default() };
                 // !!!: Igore Control
                 let state = state & 0xFFFB;
-                unsafe { self.name_from_code(keycode, state) }
+                unsafe { self.unicode_from_code(keycode, state) }
             }
             EventType::KeyRelease(_key) => None,
             _ => None,
@@ -263,7 +267,7 @@ mod tests {
     /// XCB doc is sparse on the web let's say.
     fn test_thread_safety() {
         let mut keyboard = Keyboard::new().unwrap();
-        let char_s = keyboard.add(&EventType::KeyPress(crate::rdev::Key::KeyS)).unwrap();
+        let char_s = keyboard.add(&EventType::KeyPress(crate::rdev::Key::KeyS)).unwrap().name.unwrap();
         assert_eq!(
             char_s,
             "s".to_string(),
@@ -275,7 +279,7 @@ mod tests {
     #[ignore]
     fn test_thread_safety_2() {
         let mut keyboard = Keyboard::new().unwrap();
-        let char_s = keyboard.add(&EventType::KeyPress(crate::rdev::Key::KeyS)).unwrap();
+        let char_s = keyboard.add(&EventType::KeyPress(crate::rdev::Key::KeyS)).unwrap().name.unwrap();
         assert_eq!(
             char_s,
             "s".to_string(),

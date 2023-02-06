@@ -364,7 +364,7 @@ pub trait KeyboardState {
     /// Changes the keyboard state as if this event happened. we don't
     /// really hit the OS here, which might come handy to test what should happen
     /// if we were to hit said key.
-    fn add(&mut self, event_type: &EventType) -> Option<String>;
+    fn add(&mut self, event_type: &EventType) -> Option<UnicodeInfo>;
 
     // Resets the keyboard state as if we never touched it (no shift, caps_lock and so on)
     // fn reset(&mut self);

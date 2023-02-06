@@ -23,12 +23,12 @@ unsafe impl Sync for MyDisplay {}
 unsafe impl Send for MyDisplay {}
 
 lazy_static::lazy_static! {
-    pub static ref SENDER: Arc<Mutex<Option<Sender<GrabEvent>>>> = Arc::new(Mutex::new(None));
+    static ref SENDER: Arc<Mutex<Option<Sender<GrabEvent>>>> = Arc::new(Mutex::new(None));
 }
 
 const KEYPRESS_EVENT: i32 = 2;
 
-pub static mut GLOBAL_CALLBACK: Option<Box<dyn FnMut(Event) -> Option<Event>>> = None;
+static mut GLOBAL_CALLBACK: Option<Box<dyn FnMut(Event) -> Option<Event>>> = None;
 static SOCK_FILE_PATH: &str = "/tmp/rdev_service.sock";
 const GRAB_RECV: Token = Token(0);
 const SERVICE_RECV: Token = Token(1);
@@ -50,7 +50,7 @@ fn convert_event(code: u32, is_press: bool) -> Event {
             EventType::KeyRelease(key)
         },
         time: SystemTime::now(),
-        name: None,
+        unicode: None,
         code: code as _,
         scan_code: 0,
     }

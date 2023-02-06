@@ -399,7 +399,7 @@ mod tests {
     fn test_keyboard_state() {
         // S
         let mut keyboard = Keyboard::new().unwrap();
-        let char_s = keyboard.add(&EventType::KeyPress(Key::KeyS)).unwrap();
+        let char_s = keyboard.add(&EventType::KeyPress(Key::KeyS)).unwrap().name.unwrap();
         assert_eq!(
             char_s,
             "s".to_string(),
@@ -410,7 +410,7 @@ mod tests {
 
         // Shift + S
         keyboard.add(&EventType::KeyPress(Key::ShiftLeft));
-        let char_s = keyboard.add(&EventType::KeyPress(Key::KeyS)).unwrap();
+        let char_s = keyboard.add(&EventType::KeyPress(Key::KeyS)).unwrap().name.unwrap();
         assert_eq!(char_s, "S".to_string());
         let n = keyboard.add(&EventType::KeyRelease(Key::KeyS));
         assert_eq!(n, None);
@@ -418,7 +418,7 @@ mod tests {
 
         // Reset
         keyboard.add(&EventType::KeyPress(Key::ShiftLeft));
-        let char_s = keyboard.add(&EventType::KeyPress(Key::KeyS)).unwrap();
+        let char_s = keyboard.add(&EventType::KeyPress(Key::KeyS)).unwrap().name.unwrap();
         assert_eq!(char_s, "s".to_string());
         let n = keyboard.add(&EventType::KeyRelease(Key::KeyS));
         assert_eq!(n, None);
