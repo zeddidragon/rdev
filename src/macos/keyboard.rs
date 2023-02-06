@@ -1,6 +1,6 @@
 #![allow(clippy::upper_case_acronyms)]
 use crate::macos::keycodes::code_from_key;
-use crate::rdev::{EventType, Key, KeyboardState};
+use crate::rdev::{EventType, Key, KeyboardState, UnicodeInfo};
 use core_foundation::base::{CFRelease, OSStatus};
 use core_foundation::string::UniChar;
 use core_foundation_sys::data::CFDataGetBytePtr;
@@ -88,21 +88,21 @@ impl Keyboard {
 
     #[allow(dead_code)]
     #[inline]
-    pub(crate) unsafe fn create_string_for_key(
+    pub(crate) unsafe fn create_unicode_for_key(
         &mut self,
         code: u32,
         _flags: CGEventFlags,
-    ) -> Option<String> {
+    ) -> Option<UnicodeInfo> {
         // let modifier_state = flags_to_state(flags.bits());
-        self.string_from_code(code, 0) // ignore all modifiers for name
+        self.unicode_from_code(code, 0) // ignore all modifiers for name
     }
 
     #[inline]
-    unsafe fn string_from_code(
+    unsafe fn unicode_from_code(
         &mut self,
         code: u32,
         modifier_state: ModifierState,
-    ) -> Option<String> {
+    ) -> Option<UnicodeInfo> {
         // let mut now = std::time::Instant::now();
         let mut keyboard = TISCopyCurrentKeyboardInputSource();
         let mut layout = std::ptr::null_mut();
@@ -185,7 +185,12 @@ impl Keyboard {
             return None;
         }
         
-        String::from_utf16(&buff[..length]).ok()
+        let unicode = buff[..length].to_vec();
+        Some(UnicodeInfo{
+            name: String::from_utf16(&unicode).ok(),
+            unicode,
+            is_dead: self.is_dead(),
+        })
     }
 
     pub fn is_dead(&self) -> bool {
@@ -194,7 +199,7 @@ impl Keyboard {
 }
 
 impl KeyboardState for Keyboard {
-    fn add(&mut self, event_type: &EventType) -> Option<String> {
+    fn add(&mut self, event_type: &EventType) -> Option<UnicodeInfo> {
         match event_type {
             EventType::KeyPress(key) => match key {
                 Key::ShiftLeft | Key::ShiftRight => {
@@ -211,7 +216,7 @@ impl KeyboardState for Keyboard {
                 }
                 key => {
                     let code = code_from_key(*key)?;
-                    unsafe { self.string_from_code(code.into(), self.modifier_state()) }
+                    unsafe { self.unicode_from_code(code.into(), self.modifier_state()) }
                 }
             },
             EventType::KeyRelease(key) => match key {

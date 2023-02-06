@@ -212,7 +212,7 @@ pub unsafe fn convert(
         return Some(Event {
             event_type,
             time: SystemTime::now(),
-            name: None,
+            unicode: None,
             code: code as _,
             scan_code: 0 as _,
         });
