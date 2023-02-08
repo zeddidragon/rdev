@@ -1,15 +1,17 @@
 use crate::rdev::{EventType, Key, KeyboardState, UnicodeInfo};
 use crate::windows::common::{get_code, get_scan_code, FALSE, TRUE};
+use std::collections::HashMap;
 use std::ptr::null_mut;
+use winapi::ctypes::c_int;
 use winapi::shared::minwindef::{BYTE, HKL, LPARAM, UINT};
 use winapi::um::processthreadsapi::GetCurrentThreadId;
-use winapi::um::winuser::{self, VK_LCONTROL, VK_RCONTROL, VK_CONTROL, VK_LWIN, VK_RWIN, VK_MENU, VK_LMENU, VK_RMENU};
+use winapi::um::winuser::{
+    self, VK_CONTROL, VK_LCONTROL, VK_LMENU, VK_LWIN, VK_MENU, VK_RCONTROL, VK_RMENU, VK_RWIN,
+};
 use winapi::um::winuser::{
     GetForegroundWindow, GetKeyState, GetKeyboardLayout, GetKeyboardState,
     GetWindowThreadProcessId, ToUnicodeEx, VK_CAPITAL, VK_LSHIFT, VK_RSHIFT, VK_SHIFT,
 };
-use winapi::ctypes::c_int;
-use std::collections::HashMap;
 
 const VK_SHIFT_: usize = VK_SHIFT as usize;
 const VK_CAPITAL_: usize = VK_CAPITAL as usize;
@@ -22,7 +24,8 @@ pub struct Keyboard {
     last_scan_code: UINT,
     last_state: [BYTE; 256],
     modifiers: HashMap<c_int, bool>,
-    pub last_is_dead: bool,
+    last_is_dead: bool,
+    event_popup: bool,
 }
 
 impl Keyboard {
@@ -33,38 +36,21 @@ impl Keyboard {
             last_state: [0; 256],
             modifiers: HashMap::new(),
             last_is_dead: false,
+            event_popup: true,
         })
     }
 
     pub(crate) fn get_modifier(&self, key: Key) -> bool {
         match key {
-            Key::ShiftLeft => {
-                *self.modifiers.get(&VK_LSHIFT).unwrap_or(&false)
-            }
-            Key::ShiftRight => {
-                *self.modifiers.get(&VK_RSHIFT).unwrap_or(&false)
-            }
-            Key::ControlLeft => {
-                *self.modifiers.get(&VK_LCONTROL).unwrap_or(&false)
-            }
-            Key::ControlRight => {
-                *self.modifiers.get(&VK_RCONTROL).unwrap_or(&false)
-            }
-            Key::Alt => {
-                *self.modifiers.get(&VK_LMENU).unwrap_or(&false)
-            }
-            Key::AltGr => {
-                *self.modifiers.get(&VK_RMENU).unwrap_or(&false)
-            }
-            Key::MetaLeft => {
-                *self.modifiers.get(&VK_LWIN).unwrap_or(&false)
-            }
-            Key::MetaRight => {
-                *self.modifiers.get(&VK_RWIN).unwrap_or(&false)
-            }
-            _ => {
-                false
-            }
+            Key::ShiftLeft => *self.modifiers.get(&VK_LSHIFT).unwrap_or(&false),
+            Key::ShiftRight => *self.modifiers.get(&VK_RSHIFT).unwrap_or(&false),
+            Key::ControlLeft => *self.modifiers.get(&VK_LCONTROL).unwrap_or(&false),
+            Key::ControlRight => *self.modifiers.get(&VK_RCONTROL).unwrap_or(&false),
+            Key::Alt => *self.modifiers.get(&VK_LMENU).unwrap_or(&false),
+            Key::AltGr => *self.modifiers.get(&VK_RMENU).unwrap_or(&false),
+            Key::MetaLeft => *self.modifiers.get(&VK_LWIN).unwrap_or(&false),
+            Key::MetaRight => *self.modifiers.get(&VK_RWIN).unwrap_or(&false),
+            _ => false,
         }
     }
 
@@ -109,6 +95,11 @@ impl Keyboard {
                 // ignore
             }
         }
+    }
+
+    #[inline]
+    pub(crate) fn set_event_popup(&mut self, b: bool) {
+        self.event_popup = b;
     }
 
     pub(crate) unsafe fn get_unicode(&mut self, lpdata: LPARAM) -> Option<UnicodeInfo> {
@@ -160,7 +151,7 @@ impl Keyboard {
             state[VK_RCONTROL as usize] = press_state;
         }
         if control_left || control_right {
-            state[VK_CONTROL as usize] = press_state;   
+            state[VK_CONTROL as usize] = press_state;
         }
         // state[VK_LCONTROL as usize] = if control_left {press_state} else {release_state};
         // state[VK_RCONTROL as usize] = if control_right {press_state} else {release_state};
@@ -175,7 +166,7 @@ impl Keyboard {
             state[VK_RSHIFT as usize] = press_state;
         }
         if shift_left || shift_right {
-            state[VK_SHIFT as usize] = press_state;   
+            state[VK_SHIFT as usize] = press_state;
         }
         // state[VK_LSHIFT as usize] = if shift_left {press_state} else {release_state};
         // state[VK_RSHIFT as usize] = if shift_right {press_state} else {release_state};
@@ -190,7 +181,7 @@ impl Keyboard {
             state[VK_RMENU as usize] = press_state;
         }
         if alt_left || alt_right {
-            state[VK_MENU as usize] = press_state;   
+            state[VK_MENU as usize] = press_state;
         }
         // state[VK_LMENU as usize] = if alt_left {press_state} else {release_state};
         // state[VK_RMENU as usize] = if alt_right {press_state} else {release_state};
@@ -211,7 +202,11 @@ impl Keyboard {
         Some(())
     }
 
-    pub(crate) unsafe fn get_code_name_unicode(&mut self, code: UINT, scan_code: UINT) -> Option<UnicodeInfo> {
+    pub(crate) unsafe fn get_code_name_unicode(
+        &mut self,
+        code: UINT,
+        scan_code: UINT,
+    ) -> Option<UnicodeInfo> {
         let current_window_thread_id = GetWindowThreadProcessId(GetForegroundWindow(), null_mut());
         let state_ptr = self.last_state.as_mut_ptr();
         const BUF_LEN: i32 = 32;
@@ -231,7 +226,7 @@ impl Keyboard {
             -1 => {
                 is_dead = true;
                 self.clear_keyboard_buffer(code, scan_code, layout);
-                Some(UnicodeInfo{
+                Some(UnicodeInfo {
                     name: None,
                     unicode: Vec::new(),
                     is_dead: true,
@@ -239,32 +234,55 @@ impl Keyboard {
             }
             len if len > 0 => {
                 let unicode = buff[..len as usize].to_vec();
-                Some(UnicodeInfo{
+                Some(UnicodeInfo {
                     name: String::from_utf16(&unicode).ok(),
                     unicode,
                     is_dead: false,
                 })
-            },
+            }
             _ => None,
         };
 
-        if self.last_code != 0 && self.last_is_dead {
-            buff = [0; 32];
-            let buff_ptr = buff.as_mut_ptr();
-            let last_state_ptr = self.last_state.as_mut_ptr();
-            ToUnicodeEx(
-                self.last_code,
-                self.last_scan_code,
-                last_state_ptr,
-                buff_ptr,
-                BUF_LEN,
-                0,
-                layout,
-            );
-            self.last_code = 0;
+        if self.event_popup {
+            // I cannot understand why ToUnicodeEx is called here.
+            // But ToUnicodeEx is needed here.
+            if is_dead {
+                buff = [0; 32];
+                let buff_ptr = buff.as_mut_ptr();
+                let last_state_ptr = self.last_state.as_mut_ptr();
+                ToUnicodeEx(
+                    code,
+                    scan_code,
+                    last_state_ptr,
+                    buff_ptr,
+                    BUF_LEN,
+                    0,
+                    layout,
+                );
+                self.last_code = 0;
+            } else {
+                self.last_code = code;
+                self.last_scan_code = scan_code;
+            }
         } else {
-            self.last_code = code;
-            self.last_scan_code = scan_code;
+            if self.last_code != 0 && self.last_is_dead {
+                buff = [0; 32];
+                let buff_ptr = buff.as_mut_ptr();
+                let last_state_ptr = self.last_state.as_mut_ptr();
+                ToUnicodeEx(
+                    self.last_code,
+                    self.last_scan_code,
+                    last_state_ptr,
+                    buff_ptr,
+                    BUF_LEN,
+                    0,
+                    layout,
+                );
+                self.last_code = 0;
+            } else {
+                self.last_code = code;
+                self.last_scan_code = scan_code;
+            }
         }
         self.last_is_dead = is_dead;
 

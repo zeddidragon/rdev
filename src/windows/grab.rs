@@ -7,19 +7,23 @@ use std::time::SystemTime;
 use winapi::um::winuser::{CallNextHookEx, GetMessageA, HC_ACTION};
 
 static mut GLOBAL_CALLBACK: Option<Box<dyn FnMut(Event) -> Option<Event>>> = None;
-static mut GET_KEY_NAME: bool = true;
+static mut GET_KEY_UNICODE: bool = true;
 
-pub fn set_get_key_name(b: bool) {
+pub fn set_get_key_unicode(b: bool) {
     unsafe {
-        GET_KEY_NAME = b;
+        GET_KEY_UNICODE = b;
     }
+}
+
+pub fn set_event_popup(b: bool) {
+    KEYBOARD.lock().unwrap().set_event_popup(b);
 }
 
 unsafe extern "system" fn raw_callback(code: i32, param: usize, lpdata: isize) -> isize {
     if code == HC_ACTION {
         let (opt, code) = convert(param, lpdata);
         if let Some(event_type) = opt {
-            let unicode = if GET_KEY_NAME {
+            let unicode = if GET_KEY_UNICODE {
                 match &event_type {
                     EventType::KeyPress(_key) => match (*KEYBOARD).lock() {
                         Ok(mut keyboard) => keyboard.get_unicode(lpdata),
