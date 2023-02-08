@@ -1,4 +1,4 @@
-use crate::rdev::{Button, EventType};
+use crate::rdev::{Button, EventType, Key};
 use crate::windows::keyboard::Keyboard;
 use crate::windows::keycodes::key_from_code;
 use lazy_static::lazy_static;
@@ -11,10 +11,11 @@ use winapi::shared::ntdef::LONG;
 use winapi::shared::windef::HHOOK;
 use winapi::um::errhandlingapi::GetLastError;
 use winapi::um::winuser::{
-    SetWindowsHookExA, KBDLLHOOKSTRUCT, MSLLHOOKSTRUCT, WHEEL_DELTA, WH_KEYBOARD_LL, WH_MOUSE_LL,
-    WM_KEYDOWN, WM_KEYUP, WM_LBUTTONDOWN, WM_LBUTTONUP, WM_MBUTTONDOWN, WM_MBUTTONUP,
-    WM_MOUSEHWHEEL, WM_MOUSEMOVE, WM_MOUSEWHEEL, WM_RBUTTONDOWN, WM_RBUTTONUP, WM_SYSKEYDOWN,
-    WM_SYSKEYUP, WM_XBUTTONDOWN, WM_XBUTTONUP,
+    GetForegroundWindow, GetKeyboardLayout, GetWindowThreadProcessId, MapVirtualKeyExW,
+    SetWindowsHookExA, KBDLLHOOKSTRUCT, MAPVK_VK_TO_VSC, MSLLHOOKSTRUCT, WHEEL_DELTA,
+    WH_KEYBOARD_LL, WH_MOUSE_LL, WM_KEYDOWN, WM_KEYUP, WM_LBUTTONDOWN, WM_LBUTTONUP,
+    WM_MBUTTONDOWN, WM_MBUTTONUP, WM_MOUSEHWHEEL, WM_MOUSEMOVE, WM_MOUSEWHEEL, WM_RBUTTONDOWN,
+    WM_RBUTTONUP, WM_SYSKEYDOWN, WM_SYSKEYUP, WM_XBUTTONDOWN, WM_XBUTTONUP,
 };
 #[allow(dead_code)]
 pub const TRUE: i32 = 1;
@@ -27,10 +28,19 @@ lazy_static! {
     pub(crate) static ref KEYBOARD: Mutex<Keyboard> = Mutex::new(Keyboard::new().unwrap());
 }
 
+pub fn set_modifier(key: Key, down: bool) {
+    KEYBOARD.lock().unwrap().set_modifier(key, down);
+}
+
+pub fn get_modifier(key: Key) -> bool {
+    KEYBOARD.lock().unwrap().get_modifier(key)
+}
+
 pub unsafe fn get_code(lpdata: LPARAM) -> DWORD {
     let kb = *(lpdata as *const KBDLLHOOKSTRUCT);
     kb.vkCode
 }
+
 pub unsafe fn get_scan_code(lpdata: LPARAM) -> DWORD {
     let kb = *(lpdata as *const KBDLLHOOKSTRUCT);
     // https://learn.microsoft.com/en-us/windows/win32/inputdev/about-keyboard-input#:~:text=The%20right%2Dhand%20SHIFT%20key%20is%20not%20considered%20an%20extended%2Dkey%2C%20it%20has%20a%20separate%20scan%20code%20instead.
@@ -115,6 +125,14 @@ pub unsafe fn convert(param: WPARAM, lpdata: LPARAM) -> (Option<EventType>, u16)
         },
         code,
     )
+}
+
+pub fn vk_to_scancode(vk: u32) -> u32 {
+    unsafe {
+        let current_window_thread_id = GetWindowThreadProcessId(GetForegroundWindow(), null_mut());
+        let layout = GetKeyboardLayout(current_window_thread_id);
+        MapVirtualKeyExW(vk, MAPVK_VK_TO_VSC, layout)
+    }
 }
 
 type RawCallback = unsafe extern "system" fn(code: c_int, param: WPARAM, lpdata: LPARAM) -> LRESULT;

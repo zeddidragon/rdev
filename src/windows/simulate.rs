@@ -8,12 +8,13 @@ use winapi::shared::minwindef::{DWORD, LOWORD, UINT, WORD};
 use winapi::shared::ntdef::LONG;
 use winapi::um::winuser::{
     GetForegroundWindow, GetKeyboardLayout, GetSystemMetrics, GetWindowThreadProcessId, INPUT_u,
-    MapVirtualKeyExW, SendInput, VkKeyScanW, INPUT, INPUT_KEYBOARD, INPUT_MOUSE, KEYBDINPUT,
-    KEYEVENTF_EXTENDEDKEY, KEYEVENTF_KEYUP, KEYEVENTF_SCANCODE, MAPVK_VSC_TO_VK_EX,
-    MOUSEEVENTF_ABSOLUTE, MOUSEEVENTF_HWHEEL, MOUSEEVENTF_LEFTDOWN, MOUSEEVENTF_LEFTUP,
-    MOUSEEVENTF_MIDDLEDOWN, MOUSEEVENTF_MIDDLEUP, MOUSEEVENTF_MOVE, MOUSEEVENTF_RIGHTDOWN,
-    MOUSEEVENTF_RIGHTUP, MOUSEEVENTF_VIRTUALDESK, MOUSEEVENTF_WHEEL, MOUSEEVENTF_XDOWN,
-    MOUSEEVENTF_XUP, MOUSEINPUT, SM_CXVIRTUALSCREEN, SM_CYVIRTUALSCREEN, WHEEL_DELTA,KEYEVENTF_UNICODE,
+    MapVirtualKeyExW, SendInput, VkKeyScanW, INPUT, INPUT_KEYBOARD, INPUT_MOUSE,
+    KEYBDINPUT, KEYEVENTF_EXTENDEDKEY, KEYEVENTF_KEYUP, KEYEVENTF_SCANCODE, KEYEVENTF_UNICODE,
+    MAPVK_VK_TO_VSC, MAPVK_VSC_TO_VK_EX, MOUSEEVENTF_ABSOLUTE, MOUSEEVENTF_HWHEEL,
+    MOUSEEVENTF_LEFTDOWN, MOUSEEVENTF_LEFTUP, MOUSEEVENTF_MIDDLEDOWN, MOUSEEVENTF_MIDDLEUP,
+    MOUSEEVENTF_MOVE, MOUSEEVENTF_RIGHTDOWN, MOUSEEVENTF_RIGHTUP, MOUSEEVENTF_VIRTUALDESK,
+    MOUSEEVENTF_WHEEL, MOUSEEVENTF_XDOWN, MOUSEEVENTF_XUP, MOUSEINPUT, SM_CXVIRTUALSCREEN,
+    SM_CYVIRTUALSCREEN, WHEEL_DELTA,
 };
 /// Not defined in win32 but define here for clarity
 static KEYEVENTF_KEYDOWN: DWORD = 0;
@@ -209,6 +210,30 @@ pub fn simulate(event_type: &EventType) -> Result<(), SimulateError> {
             )
         }
     }
+}
+
+pub fn simulate_scan_code(vk: Option<u16>, scan: Option<u16>, pressed: bool) -> Result<(), SimulateError> {
+    if vk == None && scan == None {
+        return Err(SimulateError);
+    }
+
+    let scan_code: u16;
+    let mut flags = KEYEVENTF_SCANCODE;
+    if scan == None {
+        scan_code = unsafe {
+            let current_window_thread_id = GetWindowThreadProcessId(GetForegroundWindow(), null_mut());
+            let layout = GetKeyboardLayout(current_window_thread_id);
+            MapVirtualKeyExW(vk.unwrap() as _, MAPVK_VK_TO_VSC, layout) as _
+        };
+
+    } else {
+        scan_code = scan.unwrap();
+    }
+
+    if !pressed {
+        flags |= KEYEVENTF_KEYUP;
+    }
+    sim_keyboard_event(flags as _, 0, scan_code)
 }
 
 pub fn simulate_char(chr: char, pressed: bool) -> Result<(), SimulateError> {

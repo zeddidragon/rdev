@@ -254,9 +254,11 @@ use crate::linux::{display_size as _display_size, listen as _listen, simulate as
 pub use crate::linux::{simulate_char, simulate_unicode, Keyboard};
 
 #[cfg(target_os = "windows")]
-use crate::windows::{display_size as _display_size, listen as _listen, simulate as _simulate};
-#[cfg(target_os = "windows")]
-pub use crate::windows::{key_from_scancode, simulate_char, simulate_unicode, Keyboard};
+pub use crate::windows::{
+    display_size as _display_size, get_modifier, key_from_scancode, listen as _listen,
+    set_modifier, simulate as _simulate, simulate_char, simulate_scan_code, simulate_unicode,
+    vk_to_scancode, Keyboard,
+};
 
 /// Listening to global events. Caveat: On MacOS, you require the listen
 /// loop needs to be the primary app (no fork before) and need to have accessibility
@@ -399,7 +401,11 @@ mod tests {
     fn test_keyboard_state() {
         // S
         let mut keyboard = Keyboard::new().unwrap();
-        let char_s = keyboard.add(&EventType::KeyPress(Key::KeyS)).unwrap().name.unwrap();
+        let char_s = keyboard
+            .add(&EventType::KeyPress(Key::KeyS))
+            .unwrap()
+            .name
+            .unwrap();
         assert_eq!(
             char_s,
             "s".to_string(),
@@ -410,7 +416,11 @@ mod tests {
 
         // Shift + S
         keyboard.add(&EventType::KeyPress(Key::ShiftLeft));
-        let char_s = keyboard.add(&EventType::KeyPress(Key::KeyS)).unwrap().name.unwrap();
+        let char_s = keyboard
+            .add(&EventType::KeyPress(Key::KeyS))
+            .unwrap()
+            .name
+            .unwrap();
         assert_eq!(char_s, "S".to_string());
         let n = keyboard.add(&EventType::KeyRelease(Key::KeyS));
         assert_eq!(n, None);
@@ -418,7 +428,11 @@ mod tests {
 
         // Reset
         keyboard.add(&EventType::KeyPress(Key::ShiftLeft));
-        let char_s = keyboard.add(&EventType::KeyPress(Key::KeyS)).unwrap().name.unwrap();
+        let char_s = keyboard
+            .add(&EventType::KeyPress(Key::KeyS))
+            .unwrap()
+            .name
+            .unwrap();
         assert_eq!(char_s, "s".to_string());
         let n = keyboard.add(&EventType::KeyRelease(Key::KeyS));
         assert_eq!(n, None);

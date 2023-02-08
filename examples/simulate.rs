@@ -39,12 +39,18 @@ fn main() {
 
     // // Conbination
     // send(&EventType::KeyPress(Key::ControlLeft));
-    // // send_char('a', true); // a â 你
+    // rdev::simulate_char('€', true);
+    // rdev::simulate_char('€', false);
     // // send_char('a', false);
     // send(&EventType::KeyRelease(Key::ControlLeft));
-    send(&EventType::KeyPress(Key::AltGr));
+    //send(&EventType::KeyPress(Key::AltGr));
     // send(&EventType::KeyPress(Key::Num3));
 
     // send(&EventType::KeyRelease(Key::Num3));
-    send(&EventType::KeyRelease(Key::AltGr));
+    //send(&EventType::KeyRelease(Key::AltGr));
+
+    rdev::simulate_scan_code(Some(0xA0), None, true);
+    rdev::simulate_scan_code(Some(0x41), None, true);
+    rdev::simulate_scan_code(Some(0x41), None, false);
+    rdev::simulate_scan_code(Some(0xA0), None, false);
 }

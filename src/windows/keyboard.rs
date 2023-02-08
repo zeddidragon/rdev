@@ -3,11 +3,13 @@ use crate::windows::common::{get_code, get_scan_code, FALSE, TRUE};
 use std::ptr::null_mut;
 use winapi::shared::minwindef::{BYTE, HKL, LPARAM, UINT};
 use winapi::um::processthreadsapi::GetCurrentThreadId;
-use winapi::um::winuser;
+use winapi::um::winuser::{self, VK_LCONTROL, VK_RCONTROL, VK_CONTROL, VK_LWIN, VK_RWIN, VK_MENU, VK_LMENU, VK_RMENU};
 use winapi::um::winuser::{
     GetForegroundWindow, GetKeyState, GetKeyboardLayout, GetKeyboardState,
     GetWindowThreadProcessId, ToUnicodeEx, VK_CAPITAL, VK_LSHIFT, VK_RSHIFT, VK_SHIFT,
 };
+use winapi::ctypes::c_int;
+use std::collections::HashMap;
 
 const VK_SHIFT_: usize = VK_SHIFT as usize;
 const VK_CAPITAL_: usize = VK_CAPITAL as usize;
@@ -19,6 +21,7 @@ pub struct Keyboard {
     last_code: UINT,
     last_scan_code: UINT,
     last_state: [BYTE; 256],
+    modifiers: HashMap<c_int, bool>,
     pub last_is_dead: bool,
 }
 
@@ -28,8 +31,115 @@ impl Keyboard {
             last_code: 0,
             last_scan_code: 0,
             last_state: [0; 256],
+            modifiers: HashMap::new(),
             last_is_dead: false,
         })
+    }
+
+    pub(crate) fn get_modifier(&self, key: Key) -> bool {
+        match key {
+            Key::ShiftLeft => {
+                *self.modifiers.get(&VK_LSHIFT).unwrap_or(&false)
+            }
+            Key::ShiftRight => {
+                *self.modifiers.get(&VK_RSHIFT).unwrap_or(&false)
+            }
+            Key::ControlLeft => {
+                *self.modifiers.get(&VK_LCONTROL).unwrap_or(&false)
+            }
+            Key::ControlRight => {
+                *self.modifiers.get(&VK_RCONTROL).unwrap_or(&false)
+            }
+            Key::Alt => {
+                *self.modifiers.get(&VK_LMENU).unwrap_or(&false)
+            }
+            Key::AltGr => {
+                *self.modifiers.get(&VK_RMENU).unwrap_or(&false)
+            }
+            Key::MetaLeft => {
+                *self.modifiers.get(&VK_LWIN).unwrap_or(&false)
+            }
+            Key::MetaRight => {
+                *self.modifiers.get(&VK_RWIN).unwrap_or(&false)
+            }
+            _ => {
+                false
+            }
+        }
+    }
+
+    pub(crate) fn set_modifier(&mut self, key: Key, down: bool) {
+        match key {
+            Key::ShiftLeft => {
+                self.modifiers.insert(VK_LSHIFT, down);
+                if down {
+                    self.modifiers.insert(VK_SHIFT, down);
+                } else {
+                    if let Some(down) = self.modifiers.get(&VK_RSHIFT) {
+                        self.modifiers.insert(VK_SHIFT, *down);
+                    }
+                }
+            }
+            Key::ShiftRight => {
+                self.modifiers.insert(VK_RSHIFT, down);
+                if down {
+                    self.modifiers.insert(VK_SHIFT, down);
+                } else {
+                    if let Some(down) = self.modifiers.get(&VK_LSHIFT) {
+                        self.modifiers.insert(VK_SHIFT, *down);
+                    }
+                }
+            }
+            Key::ControlLeft => {
+                self.modifiers.insert(VK_LCONTROL, down);
+                if down {
+                    self.modifiers.insert(VK_CONTROL, down);
+                } else {
+                    if let Some(down) = self.modifiers.get(&VK_RCONTROL) {
+                        self.modifiers.insert(VK_CONTROL, *down);
+                    }
+                }
+            }
+            Key::ControlRight => {
+                self.modifiers.insert(VK_LMENU, down);
+                if down {
+                    self.modifiers.insert(VK_MENU, down);
+                } else {
+                    if let Some(down) = self.modifiers.get(&VK_RMENU) {
+                        self.modifiers.insert(VK_MENU, *down);
+                    }
+                }
+            }
+            Key::Alt => {
+                self.modifiers.insert(VK_RMENU, down);
+                if down {
+                    self.modifiers.insert(VK_MENU, down);
+                } else {
+                    if let Some(down) = self.modifiers.get(&VK_LMENU) {
+                        self.modifiers.insert(VK_MENU, *down);
+                    }
+                }
+            }
+            Key::AltGr => {
+                self.modifiers.insert(VK_RCONTROL, down);
+                if down {
+                    self.modifiers.insert(VK_CONTROL, down);
+                } else {
+                    if let Some(down) = self.modifiers.get(&VK_LCONTROL) {
+                        self.modifiers.insert(VK_CONTROL, *down);
+                    }
+                }
+            }
+            Key::MetaLeft => {
+                self.modifiers.insert(VK_LWIN, down);
+            }
+            Key::MetaRight => {
+                self.modifiers.insert(VK_RWIN, down);
+            }
+            _ => {
+                // ignore
+            }
+        }
     }
 
     pub(crate) unsafe fn get_unicode(&mut self, lpdata: LPARAM) -> Option<UnicodeInfo> {
@@ -58,7 +168,6 @@ impl Keyboard {
         let status = if winuser::AttachThreadInput(thread_id, current_window_thread_id, TRUE) == 1 {
             // Current state of the modifiers in keyboard
             let status = GetKeyboardState(state_ptr);
-
             // Detach
             winuser::AttachThreadInput(thread_id, current_window_thread_id, FALSE);
             status
@@ -70,6 +179,32 @@ impl Keyboard {
         if status != 1 {
             return None;
         }
+
+        let press_state = 129;
+        let release_state = 0;
+        let control_left = self.get_modifier(Key::ControlLeft);
+        let control_right = self.get_modifier(Key::ControlRight);
+        state[VK_LCONTROL as usize] = if control_left {press_state} else {release_state};
+        state[VK_RCONTROL as usize] = if control_right {press_state} else {release_state};
+        state[VK_CONTROL as usize] = if control_left || control_right {press_state} else {release_state};
+
+        let shift_left = self.get_modifier(Key::ShiftLeft);
+        let shift_right = self.get_modifier(Key::ShiftRight);
+        state[VK_LSHIFT as usize] = if shift_left {press_state} else {release_state};
+        state[VK_RSHIFT as usize] = if shift_right {press_state} else {release_state};
+        state[VK_SHIFT as usize] = if shift_left || shift_right {press_state} else {release_state};
+
+        let alt_left = self.get_modifier(Key::Alt);
+        let alt_right = self.get_modifier(Key::AltGr);
+        state[VK_LMENU as usize] = if alt_left {press_state} else {release_state};
+        state[VK_RMENU as usize] = if alt_right {press_state} else {release_state};
+        state[VK_MENU as usize] = if alt_left || alt_right {press_state} else {release_state};
+
+        let win_left = self.get_modifier(Key::MetaLeft);
+        let win_right = self.get_modifier(Key::MetaRight);
+        state[VK_LWIN as usize] = if win_left {press_state} else {release_state};
+        state[VK_RWIN as usize] = if win_right {press_state} else {release_state};
+
         self.last_state = state;
         Some(())
     }
