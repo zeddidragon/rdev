@@ -268,6 +268,7 @@ pub enum Key {
 #[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 pub enum RawKey {
     ScanCode(u32),
+    WinVirtualKeycode(u32),
     LinuxXorgKeycode(u32),
     LinuxConsoleKeycode(u32),
     MacVirtualKeycode(u32),

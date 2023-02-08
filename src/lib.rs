@@ -256,7 +256,7 @@ pub use crate::linux::{simulate_char, simulate_unicode, Keyboard};
 #[cfg(target_os = "windows")]
 pub use crate::windows::{
     display_size as _display_size, get_modifier, key_from_scancode, listen as _listen,
-    set_modifier, simulate as _simulate, simulate_char, simulate_scan_code, simulate_unicode,
+    set_modifier, simulate as _simulate, simulate_char, simulate_code, simulate_unicode,
     vk_to_scancode, Keyboard,
 };
 

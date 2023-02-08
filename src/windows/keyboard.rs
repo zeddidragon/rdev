@@ -68,67 +68,36 @@ impl Keyboard {
         }
     }
 
+    #[inline]
+    fn set_modifier_(&mut self, key1: c_int, key2: c_int, key: c_int, down: bool) {
+        self.modifiers.insert(key1, down);
+        let key_down = if down {
+            true
+        } else {
+            *self.modifiers.get(&key2).unwrap_or(&false)
+        };
+        self.modifiers.insert(key, key_down);
+    }
+
     pub(crate) fn set_modifier(&mut self, key: Key, down: bool) {
         match key {
-            Key::ShiftLeft => {
-                self.modifiers.insert(VK_LSHIFT, down);
-                if down {
-                    self.modifiers.insert(VK_SHIFT, down);
-                } else {
-                    if let Some(down) = self.modifiers.get(&VK_RSHIFT) {
-                        self.modifiers.insert(VK_SHIFT, *down);
-                    }
-                }
-            }
-            Key::ShiftRight => {
-                self.modifiers.insert(VK_RSHIFT, down);
-                if down {
-                    self.modifiers.insert(VK_SHIFT, down);
-                } else {
-                    if let Some(down) = self.modifiers.get(&VK_LSHIFT) {
-                        self.modifiers.insert(VK_SHIFT, *down);
-                    }
-                }
-            }
             Key::ControlLeft => {
-                self.modifiers.insert(VK_LCONTROL, down);
-                if down {
-                    self.modifiers.insert(VK_CONTROL, down);
-                } else {
-                    if let Some(down) = self.modifiers.get(&VK_RCONTROL) {
-                        self.modifiers.insert(VK_CONTROL, *down);
-                    }
-                }
+                self.set_modifier_(VK_LCONTROL, VK_RCONTROL, VK_CONTROL, down);
             }
             Key::ControlRight => {
-                self.modifiers.insert(VK_LMENU, down);
-                if down {
-                    self.modifiers.insert(VK_MENU, down);
-                } else {
-                    if let Some(down) = self.modifiers.get(&VK_RMENU) {
-                        self.modifiers.insert(VK_MENU, *down);
-                    }
-                }
+                self.set_modifier_(VK_RCONTROL, VK_LCONTROL, VK_CONTROL, down);
+            }
+            Key::ShiftLeft => {
+                self.set_modifier_(VK_LSHIFT, VK_RSHIFT, VK_SHIFT, down);
+            }
+            Key::ShiftRight => {
+                self.set_modifier_(VK_RSHIFT, VK_LSHIFT, VK_SHIFT, down);
             }
             Key::Alt => {
-                self.modifiers.insert(VK_RMENU, down);
-                if down {
-                    self.modifiers.insert(VK_MENU, down);
-                } else {
-                    if let Some(down) = self.modifiers.get(&VK_LMENU) {
-                        self.modifiers.insert(VK_MENU, *down);
-                    }
-                }
+                self.set_modifier_(VK_LMENU, VK_RMENU, VK_MENU, down);
             }
             Key::AltGr => {
-                self.modifiers.insert(VK_RCONTROL, down);
-                if down {
-                    self.modifiers.insert(VK_CONTROL, down);
-                } else {
-                    if let Some(down) = self.modifiers.get(&VK_LCONTROL) {
-                        self.modifiers.insert(VK_CONTROL, *down);
-                    }
-                }
+                self.set_modifier_(VK_RMENU, VK_LMENU, VK_MENU, down);
             }
             Key::MetaLeft => {
                 self.modifiers.insert(VK_LWIN, down);
@@ -181,29 +150,62 @@ impl Keyboard {
         }
 
         let press_state = 129;
-        let release_state = 0;
+        // let release_state = 0;
         let control_left = self.get_modifier(Key::ControlLeft);
         let control_right = self.get_modifier(Key::ControlRight);
-        state[VK_LCONTROL as usize] = if control_left {press_state} else {release_state};
-        state[VK_RCONTROL as usize] = if control_right {press_state} else {release_state};
-        state[VK_CONTROL as usize] = if control_left || control_right {press_state} else {release_state};
+        if control_left {
+            state[VK_LCONTROL as usize] = press_state;
+        }
+        if control_right {
+            state[VK_RCONTROL as usize] = press_state;
+        }
+        if control_left || control_right {
+            state[VK_CONTROL as usize] = press_state;   
+        }
+        // state[VK_LCONTROL as usize] = if control_left {press_state} else {release_state};
+        // state[VK_RCONTROL as usize] = if control_right {press_state} else {release_state};
+        // state[VK_CONTROL as usize] = if control_left || control_right {press_state} else {release_state};
 
         let shift_left = self.get_modifier(Key::ShiftLeft);
         let shift_right = self.get_modifier(Key::ShiftRight);
-        state[VK_LSHIFT as usize] = if shift_left {press_state} else {release_state};
-        state[VK_RSHIFT as usize] = if shift_right {press_state} else {release_state};
-        state[VK_SHIFT as usize] = if shift_left || shift_right {press_state} else {release_state};
+        if shift_left {
+            state[VK_LSHIFT as usize] = press_state;
+        }
+        if shift_right {
+            state[VK_RSHIFT as usize] = press_state;
+        }
+        if shift_left || shift_right {
+            state[VK_SHIFT as usize] = press_state;   
+        }
+        // state[VK_LSHIFT as usize] = if shift_left {press_state} else {release_state};
+        // state[VK_RSHIFT as usize] = if shift_right {press_state} else {release_state};
+        // state[VK_SHIFT as usize] = if shift_left || shift_right {press_state} else {release_state};
 
         let alt_left = self.get_modifier(Key::Alt);
         let alt_right = self.get_modifier(Key::AltGr);
-        state[VK_LMENU as usize] = if alt_left {press_state} else {release_state};
-        state[VK_RMENU as usize] = if alt_right {press_state} else {release_state};
-        state[VK_MENU as usize] = if alt_left || alt_right {press_state} else {release_state};
+        if alt_left {
+            state[VK_LMENU as usize] = press_state;
+        }
+        if alt_right {
+            state[VK_RMENU as usize] = press_state;
+        }
+        if alt_left || alt_right {
+            state[VK_MENU as usize] = press_state;   
+        }
+        // state[VK_LMENU as usize] = if alt_left {press_state} else {release_state};
+        // state[VK_RMENU as usize] = if alt_right {press_state} else {release_state};
+        // state[VK_MENU as usize] = if alt_left || alt_right {press_state} else {release_state};
 
         let win_left = self.get_modifier(Key::MetaLeft);
         let win_right = self.get_modifier(Key::MetaRight);
-        state[VK_LWIN as usize] = if win_left {press_state} else {release_state};
-        state[VK_RWIN as usize] = if win_right {press_state} else {release_state};
+        if win_left {
+            state[VK_LWIN as usize] = press_state;
+        }
+        if win_right {
+            state[VK_RWIN as usize] = press_state;
+        }
+        // state[VK_LWIN as usize] = if win_left {press_state} else {release_state};
+        // state[VK_RWIN as usize] = if win_right {press_state} else {release_state};
 
         self.last_state = state;
         Some(())

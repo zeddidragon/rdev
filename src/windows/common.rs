@@ -12,7 +12,7 @@ use winapi::shared::windef::HHOOK;
 use winapi::um::errhandlingapi::GetLastError;
 use winapi::um::winuser::{
     GetForegroundWindow, GetKeyboardLayout, GetWindowThreadProcessId, MapVirtualKeyExW,
-    SetWindowsHookExA, KBDLLHOOKSTRUCT, MAPVK_VK_TO_VSC, MSLLHOOKSTRUCT, WHEEL_DELTA,
+    SetWindowsHookExA, KBDLLHOOKSTRUCT, MAPVK_VK_TO_VSC_EX, MSLLHOOKSTRUCT, WHEEL_DELTA,
     WH_KEYBOARD_LL, WH_MOUSE_LL, WM_KEYDOWN, WM_KEYUP, WM_LBUTTONDOWN, WM_LBUTTONUP,
     WM_MBUTTONDOWN, WM_MBUTTONUP, WM_MOUSEHWHEEL, WM_MOUSEMOVE, WM_MOUSEWHEEL, WM_RBUTTONDOWN,
     WM_RBUTTONUP, WM_SYSKEYDOWN, WM_SYSKEYUP, WM_XBUTTONDOWN, WM_XBUTTONUP,
@@ -131,7 +131,7 @@ pub fn vk_to_scancode(vk: u32) -> u32 {
     unsafe {
         let current_window_thread_id = GetWindowThreadProcessId(GetForegroundWindow(), null_mut());
         let layout = GetKeyboardLayout(current_window_thread_id);
-        MapVirtualKeyExW(vk, MAPVK_VK_TO_VSC, layout)
+        MapVirtualKeyExW(vk, MAPVK_VK_TO_VSC_EX, layout)
     }
 }
 

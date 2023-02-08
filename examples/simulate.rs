@@ -1,5 +1,5 @@
 use rdev::{simulate, EventType, Key, SimulateError};
-use std::{thread, time};
+use std::{thread::{self, sleep_ms}, time};
 
 fn send(event_type: &EventType) {
     let delay = time::Duration::from_millis(20);
@@ -49,8 +49,8 @@ fn main() {
     // send(&EventType::KeyRelease(Key::Num3));
     //send(&EventType::KeyRelease(Key::AltGr));
 
-    rdev::simulate_scan_code(Some(0xA0), None, true);
-    rdev::simulate_scan_code(Some(0x41), None, true);
-    rdev::simulate_scan_code(Some(0x41), None, false);
-    rdev::simulate_scan_code(Some(0xA0), None, false);
+    rdev::simulate_code(Some(0xA2), None, true);
+    rdev::simulate_code(Some(0x4F), None, true);
+    rdev::simulate_code(Some(0x4F), None, false);
+    rdev::simulate_code(Some(0xA2), None, false);
 }
