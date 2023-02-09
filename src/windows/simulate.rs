@@ -268,3 +268,11 @@ pub fn simulate_unicode(unicode: u16) -> Result<(), SimulateError> {
     sim_keyboard_event(KEYEVENTF_UNICODE, 0, unicode)?;
     sim_keyboard_event(KEYEVENTF_UNICODE | KEYEVENTF_KEYUP, 0, unicode)
 }
+
+#[inline]
+pub fn simulate_unistr(unistr: &str) -> Result<(), SimulateError> {
+    for unicode in unistr.encode_utf16() {
+        simulate_unicode(unicode)?;
+    }
+    Ok(())
+}
