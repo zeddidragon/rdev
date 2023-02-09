@@ -18,7 +18,7 @@ type OptionBits = c_uint;
 const kUCKeyTranslateDeadKeysBit: OptionBits = 1 << 31;
 #[allow(non_upper_case_globals)]
 const kUCKeyActionDown: u16 = 0;
-/*
+
 #[allow(non_upper_case_globals)]
 const NSEventModifierFlagCapsLock: u64 = 1 << 16;
 #[allow(non_upper_case_globals)]
@@ -29,7 +29,6 @@ const NSEventModifierFlagControl: u64 = 1 << 18;
 const NSEventModifierFlagOption: u64 = 1 << 19;
 #[allow(non_upper_case_globals)]
 const NSEventModifierFlagCommand: u64 = 1 << 20;
-*/
 const BUF_LEN: usize = 4;
 
 #[cfg(target_os = "macos")]
@@ -91,10 +90,10 @@ impl Keyboard {
     pub(crate) unsafe fn create_unicode_for_key(
         &mut self,
         code: u32,
-        _flags: CGEventFlags,
+        flags: CGEventFlags,
     ) -> Option<UnicodeInfo> {
-        // let modifier_state = flags_to_state(flags.bits());
-        self.unicode_from_code(code, 0) // ignore all modifiers for name
+        let modifier_state = flags_to_state(flags.bits());
+        self.unicode_from_code(code, modifier_state) // ignore all modifiers for name
     }
 
     #[inline]
@@ -243,7 +242,6 @@ impl KeyboardState for Keyboard {
     // }
 }
 
-/*
 #[allow(clippy::identity_op)]
 pub unsafe fn flags_to_state(flags: u64) -> ModifierState {
     let has_alt = flags & NSEventModifierFlagOption;
@@ -269,4 +267,4 @@ pub unsafe fn flags_to_state(flags: u64) -> ModifierState {
     }
     modifier
 }
-*/
+
