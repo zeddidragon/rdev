@@ -161,8 +161,19 @@ impl Keyboard {
         if !keyboard.is_null() {
             CFRelease(keyboard);
         }
-        if last_dead_state != 0 && self.dead_state != 0{
-            self.dead_state = 0;
+        let mut cur_is_dead = self.is_dead();
+        if last_dead_state == 0 {
+            if self.dead_state != 0 {
+                return Some(UnicodeInfo{
+                    name: None,
+                    unicode: Vec::new(),
+                    is_dead: cur_is_dead,
+                });
+            }
+        } else {
+            if self.dead_state != 0 {
+                cur_is_dead = false;
+            }
         }
         // println!("{:?}", now.elapsed());
 
@@ -188,7 +199,7 @@ impl Keyboard {
         Some(UnicodeInfo{
             name: String::from_utf16(&unicode).ok(),
             unicode,
-            is_dead: self.is_dead(),
+            is_dead: cur_is_dead,
         })
     }
 

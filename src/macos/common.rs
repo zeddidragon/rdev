@@ -197,7 +197,7 @@ pub unsafe fn convert(
     };
     if let Some(event_type) = option_type {
         let unicode = match event_type {
-            EventType::KeyPress(_k) | EventType::KeyRelease(_k) => {
+            EventType::KeyPress(_k) => {
                 let code =
                     cg_event.get_integer_value_field(EventField::KEYBOARD_EVENT_KEYCODE) as u32;
                 let flags = cg_event.get_flags();
@@ -206,6 +206,9 @@ pub unsafe fn convert(
                 //     s = Some(key_to_name(_k).to_owned())
                 // }
                 s
+            }
+            EventType::KeyRelease(..) => {
+                None
             }
             _ => None,
         };
