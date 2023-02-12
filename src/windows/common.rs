@@ -15,7 +15,7 @@ use winapi::um::winuser::{
     SetWindowsHookExA, KBDLLHOOKSTRUCT, MAPVK_VK_TO_VSC_EX, MSLLHOOKSTRUCT, WHEEL_DELTA,
     WH_KEYBOARD_LL, WH_MOUSE_LL, WM_KEYDOWN, WM_KEYUP, WM_LBUTTONDOWN, WM_LBUTTONUP,
     WM_MBUTTONDOWN, WM_MBUTTONUP, WM_MOUSEHWHEEL, WM_MOUSEMOVE, WM_MOUSEWHEEL, WM_RBUTTONDOWN,
-    WM_RBUTTONUP, WM_SYSKEYDOWN, WM_SYSKEYUP, WM_XBUTTONDOWN, WM_XBUTTONUP,
+    WM_RBUTTONUP, WM_SYSKEYDOWN, WM_SYSKEYUP, WM_XBUTTONDOWN, WM_XBUTTONUP, VK_PACKET,
 };
 #[allow(dead_code)]
 pub const TRUE: i32 = 1;
@@ -38,7 +38,12 @@ pub fn get_modifier(key: Key) -> bool {
 
 pub unsafe fn get_code(lpdata: LPARAM) -> DWORD {
     let kb = *(lpdata as *const KBDLLHOOKSTRUCT);
-    kb.vkCode
+    // https://learn.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes#:~:text=OEM%20specific-,VK_PACKET,-0xE7
+    if kb.vkCode == VK_PACKET as _ {
+        kb.scanCode
+    } else {
+        kb.vkCode
+    }
 }
 
 pub unsafe fn get_scan_code(lpdata: LPARAM) -> DWORD {
