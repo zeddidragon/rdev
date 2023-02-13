@@ -125,7 +125,6 @@ impl Keyboard {
         self.unicode_from_code(code, modifier_state) // ignore all modifiers for name
     }
 
-    // https://github.com/microsoft/node-native-keymap/blob/main/src/keyboard_mac.mm
     #[inline]
     unsafe fn unicode_from_code(
         &mut self,
