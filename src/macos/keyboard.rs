@@ -31,12 +31,29 @@ const NSEventModifierFlagOption: u64 = 1 << 19;
 const NSEventModifierFlagCommand: u64 = 1 << 20;
 const BUF_LEN: usize = 4;
 
-const META_BIT: u32 = 1 << 0;
-const SHIFT_BIT: u32 = 1 << 1;
-#[allow(dead_code)]
-const CAPS_LOCK_BIT: u32 = 1 << 1;
-const ALT_BIT: u32 = 1 << 3;
-const CONTROL_BIT: u32 = 1 << 4;
+
+#[allow(non_upper_case_globals, dead_code)]
+const cmdKeyBit: u32 = 8;
+#[allow(non_upper_case_globals, dead_code)]
+const shiftKeyBit: u32 = 9;
+#[allow(non_upper_case_globals, dead_code)]
+const alphaLockBit: u32 = 10;
+#[allow(non_upper_case_globals, dead_code)]
+const optionKeyBit: u32 = 11;
+#[allow(non_upper_case_globals, dead_code)]
+const controlKeyBit: u32 = 12;
+
+#[allow(non_upper_case_globals, dead_code)]
+const cmdKey: u32 = 1 << cmdKeyBit;
+#[allow(non_upper_case_globals, dead_code)]
+const shiftKey: u32 = 1 << shiftKeyBit;
+#[allow(non_upper_case_globals, dead_code)]
+const alphaLock: u32 = 1 << alphaLockBit;
+#[allow(non_upper_case_globals, dead_code)]
+const optionKey: u32 = 1 << optionKeyBit;
+#[allow(non_upper_case_globals, dead_code)]
+const controlKey: u32 = 1 << controlKeyBit;
+
 
 #[cfg(target_os = "macos")]
 #[link(name = "Cocoa", kind = "framework")]
@@ -108,6 +125,7 @@ impl Keyboard {
         self.unicode_from_code(code, modifier_state) // ignore all modifiers for name
     }
 
+    // https://github.com/microsoft/node-native-keymap/blob/main/src/keyboard_mac.mm
     #[inline]
     unsafe fn unicode_from_code(
         &mut self,
@@ -266,20 +284,19 @@ pub unsafe fn flags_to_state(flags: u64) -> ModifierState {
     let has_meta = flags & NSEventModifierFlagCommand;
     let mut modifier = 0;
     if has_alt != 0 {
-        modifier |= ALT_BIT;
+        modifier |= optionKey;
     }
     // if has_caps_lock != 0 {
     //     modifier += CAPS_LOCK_BIT;
     // }
     if has_control != 0 {
-        modifier |= CONTROL_BIT
+        modifier |= controlKey
     }
     if has_shift != 0 {
-        modifier |= SHIFT_BIT;
+        modifier |= shiftKey;
     }
     if has_meta != 0 {
-        modifier |= META_BIT;
+        modifier |= cmdKey;
     }
-    modifier
+    (modifier >> 8) & 0xFF
 }
-
