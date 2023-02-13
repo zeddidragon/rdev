@@ -19,7 +19,7 @@ const kUCKeyTranslateDeadKeysBit: OptionBits = 1 << 31;
 #[allow(non_upper_case_globals)]
 const kUCKeyActionDown: u16 = 0;
 
-#[allow(non_upper_case_globals)]
+#[allow(non_upper_case_globals, dead_code)]
 const NSEventModifierFlagCapsLock: u64 = 1 << 16;
 #[allow(non_upper_case_globals)]
 const NSEventModifierFlagShift: u64 = 1 << 17;
@@ -30,6 +30,13 @@ const NSEventModifierFlagOption: u64 = 1 << 19;
 #[allow(non_upper_case_globals)]
 const NSEventModifierFlagCommand: u64 = 1 << 20;
 const BUF_LEN: usize = 4;
+
+const META_BIT: u32 = 1 << 0;
+const SHIFT_BIT: u32 = 1 << 1;
+#[allow(dead_code)]
+const CAPS_LOCK_BIT: u32 = 1 << 1;
+const ALT_BIT: u32 = 1 << 3;
+const CONTROL_BIT: u32 = 1 << 4;
 
 #[cfg(target_os = "macos")]
 #[link(name = "Cocoa", kind = "framework")]
@@ -92,7 +99,12 @@ impl Keyboard {
         code: u32,
         flags: CGEventFlags,
     ) -> Option<UnicodeInfo> {
-        let modifier_state = flags_to_state(flags.bits());
+        let flags_bits = flags.bits();
+        if flags_bits & NSEventModifierFlagCommand != 0 || flags_bits & NSEventModifierFlagControl != 0 {
+            return None;
+        }
+
+        let modifier_state = flags_to_state(flags_bits);
         self.unicode_from_code(code, modifier_state) // ignore all modifiers for name
     }
 
@@ -243,38 +255,30 @@ impl KeyboardState for Keyboard {
             _ => None,
         }
     }
-
- 
-
-    // fn reset(&mut self) {
-    //     self.dead_state = 0;
-    //     self.shift = false;
-    //     self.caps_lock = false;
-    // }
 }
 
 #[allow(clippy::identity_op)]
 pub unsafe fn flags_to_state(flags: u64) -> ModifierState {
     let has_alt = flags & NSEventModifierFlagOption;
-    let has_caps_lock = flags & NSEventModifierFlagCapsLock;
+    // let has_caps_lock = flags & NSEventModifierFlagCapsLock;
     let has_control = flags & NSEventModifierFlagControl;
     let has_shift = flags & NSEventModifierFlagShift;
     let has_meta = flags & NSEventModifierFlagCommand;
     let mut modifier = 0;
     if has_alt != 0 {
-        modifier += 1 << 3;
+        modifier |= ALT_BIT;
     }
-    if has_caps_lock != 0 {
-        modifier += 1 << 1;
-    }
+    // if has_caps_lock != 0 {
+    //     modifier += CAPS_LOCK_BIT;
+    // }
     if has_control != 0 {
-        modifier += 1 << 4;
+        modifier |= CONTROL_BIT
     }
     if has_shift != 0 {
-        modifier += 1 << 1;
+        modifier |= SHIFT_BIT;
     }
     if has_meta != 0 {
-        modifier += 1 << 0;
+        modifier |= META_BIT;
     }
     modifier
 }
