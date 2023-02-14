@@ -114,9 +114,7 @@ pub type QCallback = unsafe extern "C" fn(
 #[cfg(target_os = "macos")]
 #[inline]
 fn kb_get_layout_type() -> PhysicalKeyboardLayoutType {
-    unsafe {
-        KBGetLayoutType(LMGetKbdType() as _)
-    }
+    unsafe { KBGetLayoutType(LMGetKbdType() as _) }
 }
 
 #[cfg(target_os = "macos")]
@@ -139,6 +137,10 @@ pub fn map_keycode(code: u32) -> u32 {
         }
         _ => code,
     }
+}
+
+pub fn set_is_main_thread(b: bool) {
+    KEYBOARD_STATE.lock().unwrap().set_is_main_thread(b);
 }
 
 #[inline]
@@ -207,9 +209,7 @@ pub unsafe fn convert(
                 // }
                 s
             }
-            EventType::KeyRelease(..) => {
-                None
-            }
+            EventType::KeyRelease(..) => None,
             _ => None,
         };
         return Some(Event {

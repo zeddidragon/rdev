@@ -54,6 +54,11 @@ const optionKey: u32 = 1 << optionKeyBit;
 #[allow(non_upper_case_globals, dead_code)]
 const controlKey: u32 = 1 << controlKeyBit;
 
+#[cfg(target_os = "macos")]
+lazy_static::lazy_static! {
+    static ref QUEUE: dispatch::Queue = dispatch::Queue::main();
+}
+
 
 #[cfg(target_os = "macos")]
 #[link(name = "Cocoa", kind = "framework")]
@@ -78,23 +83,29 @@ extern "C" {
         unicode_string: *mut [UniChar; BUF_LEN],
     ) -> OSStatus;
     static kTISPropertyUnicodeKeyLayoutData: *mut c_void;
-
 }
 
 pub struct Keyboard {
+    is_main_thread: bool,
     dead_state: u32,
     shift: bool,
     alt: bool,  // options
     caps_lock: bool,
 }
+
 impl Keyboard {
     pub fn new() -> Option<Keyboard> {
         Some(Keyboard {
+            is_main_thread: true,
             dead_state: 0,
             shift: false,
             alt: false,
             caps_lock: false,
         })
+    }
+
+    pub fn set_is_main_thread(&mut self, b: bool) {
+        self.is_main_thread = b;
     }
 
     fn modifier_state(&self) -> ModifierState {
@@ -122,7 +133,15 @@ impl Keyboard {
         }
 
         let modifier_state = flags_to_state(flags_bits);
-        self.unicode_from_code(code, modifier_state) // ignore all modifiers for name
+
+        if self.is_main_thread {
+            self.unicode_from_code(code, modifier_state)
+        } else {
+            QUEUE.exec_sync(move || {
+                // ignore all modifiers for name
+                self.unicode_from_code(code, modifier_state)
+            })
+        }
     }
 
     #[inline]
