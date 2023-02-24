@@ -18,8 +18,8 @@ type OptionBits = c_uint;
 const kUCKeyTranslateDeadKeysBit: OptionBits = 1 << 31;
 #[allow(non_upper_case_globals)]
 const kUCKeyActionDown: u16 = 0;
-/*
-#[allow(non_upper_case_globals)]
+
+#[allow(non_upper_case_globals, dead_code)]
 const NSEventModifierFlagCapsLock: u64 = 1 << 16;
 #[allow(non_upper_case_globals)]
 const NSEventModifierFlagShift: u64 = 1 << 17;
@@ -29,8 +29,36 @@ const NSEventModifierFlagControl: u64 = 1 << 18;
 const NSEventModifierFlagOption: u64 = 1 << 19;
 #[allow(non_upper_case_globals)]
 const NSEventModifierFlagCommand: u64 = 1 << 20;
-*/
 const BUF_LEN: usize = 4;
+
+
+#[allow(non_upper_case_globals, dead_code)]
+const cmdKeyBit: u32 = 8;
+#[allow(non_upper_case_globals, dead_code)]
+const shiftKeyBit: u32 = 9;
+#[allow(non_upper_case_globals, dead_code)]
+const alphaLockBit: u32 = 10;
+#[allow(non_upper_case_globals, dead_code)]
+const optionKeyBit: u32 = 11;
+#[allow(non_upper_case_globals, dead_code)]
+const controlKeyBit: u32 = 12;
+
+#[allow(non_upper_case_globals, dead_code)]
+const cmdKey: u32 = 1 << cmdKeyBit;
+#[allow(non_upper_case_globals, dead_code)]
+const shiftKey: u32 = 1 << shiftKeyBit;
+#[allow(non_upper_case_globals, dead_code)]
+const alphaLock: u32 = 1 << alphaLockBit;
+#[allow(non_upper_case_globals, dead_code)]
+const optionKey: u32 = 1 << optionKeyBit;
+#[allow(non_upper_case_globals, dead_code)]
+const controlKey: u32 = 1 << controlKeyBit;
+
+#[cfg(target_os = "macos")]
+lazy_static::lazy_static! {
+    static ref QUEUE: dispatch::Queue = dispatch::Queue::main();
+}
+
 
 #[cfg(target_os = "macos")]
 #[link(name = "Cocoa", kind = "framework")]
@@ -55,23 +83,29 @@ extern "C" {
         unicode_string: *mut [UniChar; BUF_LEN],
     ) -> OSStatus;
     static kTISPropertyUnicodeKeyLayoutData: *mut c_void;
-
 }
 
 pub struct Keyboard {
+    is_main_thread: bool,
     dead_state: u32,
     shift: bool,
     alt: bool,  // options
     caps_lock: bool,
 }
+
 impl Keyboard {
     pub fn new() -> Option<Keyboard> {
         Some(Keyboard {
+            is_main_thread: true,
             dead_state: 0,
             shift: false,
             alt: false,
             caps_lock: false,
         })
+    }
+
+    pub fn set_is_main_thread(&mut self, b: bool) {
+        self.is_main_thread = b;
     }
 
     fn modifier_state(&self) -> ModifierState {
@@ -91,10 +125,23 @@ impl Keyboard {
     pub(crate) unsafe fn create_unicode_for_key(
         &mut self,
         code: u32,
-        _flags: CGEventFlags,
+        flags: CGEventFlags,
     ) -> Option<UnicodeInfo> {
-        // let modifier_state = flags_to_state(flags.bits());
-        self.unicode_from_code(code, 0) // ignore all modifiers for name
+        let flags_bits = flags.bits();
+        if flags_bits & NSEventModifierFlagCommand != 0 || flags_bits & NSEventModifierFlagControl != 0 {
+            return None;
+        }
+
+        let modifier_state = flags_to_state(flags_bits);
+
+        if self.is_main_thread {
+            self.unicode_from_code(code, modifier_state)
+        } else {
+            QUEUE.exec_sync(move || {
+                // ignore all modifiers for name
+                self.unicode_from_code(code, modifier_state)
+            })
+        }
     }
 
     #[inline]
@@ -162,8 +209,19 @@ impl Keyboard {
         if !keyboard.is_null() {
             CFRelease(keyboard);
         }
-        if last_dead_state != 0 && self.dead_state != 0{
-            self.dead_state = 0;
+        let mut cur_is_dead = self.is_dead();
+        if last_dead_state == 0 {
+            if self.dead_state != 0 {
+                return Some(UnicodeInfo{
+                    name: None,
+                    unicode: Vec::new(),
+                    is_dead: cur_is_dead,
+                });
+            }
+        } else {
+            if self.dead_state != 0 {
+                cur_is_dead = false;
+            }
         }
         // println!("{:?}", now.elapsed());
 
@@ -189,7 +247,7 @@ impl Keyboard {
         Some(UnicodeInfo{
             name: String::from_utf16(&unicode).ok(),
             unicode,
-            is_dead: self.is_dead(),
+            is_dead: cur_is_dead,
         })
     }
 
@@ -233,40 +291,30 @@ impl KeyboardState for Keyboard {
             _ => None,
         }
     }
-
- 
-
-    // fn reset(&mut self) {
-    //     self.dead_state = 0;
-    //     self.shift = false;
-    //     self.caps_lock = false;
-    // }
 }
 
-/*
 #[allow(clippy::identity_op)]
 pub unsafe fn flags_to_state(flags: u64) -> ModifierState {
     let has_alt = flags & NSEventModifierFlagOption;
-    let has_caps_lock = flags & NSEventModifierFlagCapsLock;
+    // let has_caps_lock = flags & NSEventModifierFlagCapsLock;
     let has_control = flags & NSEventModifierFlagControl;
     let has_shift = flags & NSEventModifierFlagShift;
     let has_meta = flags & NSEventModifierFlagCommand;
     let mut modifier = 0;
     if has_alt != 0 {
-        modifier += 1 << 3;
+        modifier |= optionKey;
     }
-    if has_caps_lock != 0 {
-        modifier += 1 << 1;
-    }
+    // if has_caps_lock != 0 {
+    //     modifier += CAPS_LOCK_BIT;
+    // }
     if has_control != 0 {
-        modifier += 1 << 4;
+        modifier |= controlKey
     }
     if has_shift != 0 {
-        modifier += 1 << 1;
+        modifier |= shiftKey;
     }
     if has_meta != 0 {
-        modifier += 1 << 0;
+        modifier |= cmdKey;
     }
-    modifier
+    (modifier >> 8) & 0xFF
 }
-*/

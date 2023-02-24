@@ -244,15 +244,13 @@ impl Keyboard {
         };
 
         if self.event_popup {
-            // I cannot understand why ToUnicodeEx is called here.
-            // But ToUnicodeEx is needed here.
-            if is_dead {
+            if self.last_code != 0 && self.last_is_dead {
                 buff = [0; 32];
                 let buff_ptr = buff.as_mut_ptr();
                 let last_state_ptr = self.last_state.as_mut_ptr();
                 ToUnicodeEx(
-                    code,
-                    scan_code,
+                    self.last_code,
+                    self.last_scan_code,
                     last_state_ptr,
                     buff_ptr,
                     BUF_LEN,
@@ -265,13 +263,15 @@ impl Keyboard {
                 self.last_scan_code = scan_code;
             }
         } else {
-            if self.last_code != 0 && self.last_is_dead {
+            // I cannot understand why ToUnicodeEx is called.
+            // But ToUnicodeEx is needed here.
+            if is_dead {
                 buff = [0; 32];
                 let buff_ptr = buff.as_mut_ptr();
                 let last_state_ptr = self.last_state.as_mut_ptr();
                 ToUnicodeEx(
-                    self.last_code,
-                    self.last_scan_code,
+                    code,
+                    scan_code,
                     last_state_ptr,
                     buff_ptr,
                     BUF_LEN,

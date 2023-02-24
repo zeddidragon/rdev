@@ -14,7 +14,7 @@ mod simulate;
 pub mod virtual_keycodes;
 
 #[cfg(target_os = "macos")]
-pub use crate::macos::common::map_keycode;
+pub use crate::macos::common::{map_keycode, set_is_main_thread};
 #[cfg(target_os = "macos")]
 pub use crate::macos::display::display_size;
 #[cfg(target_os = "macos")]

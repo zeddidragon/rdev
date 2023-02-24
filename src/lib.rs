@@ -245,7 +245,9 @@ pub use crate::macos::key_from_code as macos_key_from_code;
 #[cfg(target_os = "macos")]
 use crate::macos::{display_size as _display_size, listen as _listen, simulate as _simulate};
 #[cfg(target_os = "macos")]
-pub use crate::macos::{key_from_code, Keyboard, VirtualInput};
+pub use crate::macos::{
+    key_from_code, set_is_main_thread, virtual_keycodes::*, Keyboard, VirtualInput,
+};
 #[cfg(target_os = "macos")]
 pub use core_graphics::{event::CGEventTapLocation, event_source::CGEventSourceStateID};
 
@@ -260,7 +262,7 @@ pub use crate::linux::{simulate_char, simulate_unicode, Keyboard};
 pub use crate::windows::{
     display_size as _display_size, get_modifier, key_from_scancode, listen as _listen,
     set_modifier, simulate as _simulate, simulate_char, simulate_code, simulate_unicode,
-    vk_to_scancode, Keyboard,
+    simulate_unistr, vk_to_scancode, Keyboard,
 };
 
 /// Listening to global events. Caveat: On MacOS, you require the listen

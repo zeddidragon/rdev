@@ -48,9 +48,12 @@ fn main() {
 
     // send(&EventType::KeyRelease(Key::Num3));
     //send(&EventType::KeyRelease(Key::AltGr));
-
+    #[cfg(target_os = "windows")]
     rdev::simulate_code(Some(0xA2), None, true);
+    #[cfg(target_os = "windows")]
     rdev::simulate_code(Some(0x4F), None, true);
+    #[cfg(target_os = "windows")]
     rdev::simulate_code(Some(0x4F), None, false);
+    #[cfg(target_os = "windows")]
     rdev::simulate_code(Some(0xA2), None, false);
 }
