@@ -239,6 +239,9 @@ pub use crate::windows::{
     scancode_from_key as win_scancode_from_key,
 };
 
+pub use crate::linux::key_from_code as linux_key_from_code;
+pub use crate::macos::key_from_code as macos_key_from_code;
+
 #[cfg(target_os = "macos")]
 use crate::macos::{display_size as _display_size, listen as _listen, simulate as _simulate};
 #[cfg(target_os = "macos")]
