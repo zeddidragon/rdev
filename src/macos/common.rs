@@ -216,8 +216,8 @@ pub unsafe fn convert(
             event_type,
             time: SystemTime::now(),
             unicode,
-            code: code as _,
-            scan_code: 0 as _,
+            platform_code: code as _,
+            position_code: 0 as _,
         });
     }
     None
