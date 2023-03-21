@@ -1,5 +1,5 @@
 // This code is awful. Good luck
-use crate::{key_from_code, Event, EventType, GrabError};
+use crate::{key_from_code, Event, EventType, GrabError, Keyboard, KeyboardState};
 use log::error;
 use mio::unix::SourceFd;
 use mio::{Events, Interest, Poll, Token};
@@ -16,6 +16,8 @@ use std::{
     time::SystemTime,
 };
 use x11::xlib::{self, Display, GrabModeAsync, KeyPressMask, KeyReleaseMask};
+
+use super::common::KEYBOARD;
 
 #[derive(Debug)]
 pub struct MyDisplay(*mut xlib::Display);
@@ -43,16 +45,30 @@ pub enum GrabEvent {
 
 fn convert_event(code: u32, is_press: bool) -> Event {
     let key = key_from_code(code);
-    Event {
-        event_type: if is_press {
-            EventType::KeyPress(key)
+    let event_type = if is_press {
+        EventType::KeyPress(key)
+    } else {
+        EventType::KeyRelease(key)
+    };
+
+    let (unicode, platform_code) = unsafe {
+        if let Some(kbd) = &mut KEYBOARD {
+            if let Some(seq) = kbd.add(&event_type) {
+                (Some(seq), kbd.keysym())
+            } else {
+                (None, 0)
+            }
         } else {
-            EventType::KeyRelease(key)
-        },
+            (None, 0)
+        }
+    };
+
+    Event {
+        event_type,
         time: SystemTime::now(),
-        unicode: None,
-        code: code as _,
-        scan_code: 0,
+        unicode,
+        code: platform_code,
+        scan_code: code as _,
     }
 }
 
@@ -91,6 +107,10 @@ fn start_grab_service() -> Result<(), GrabError> {
     let (send, recv) = std::sync::mpsc::channel::<GrabEvent>();
     *SENDER.lock().unwrap() = Some(send);
 
+    let keyboard = Keyboard::new();
+    unsafe {
+        KEYBOARD = keyboard;
+    }
     start_grab_thread()?;
 
     thread::spawn(move || loop {
