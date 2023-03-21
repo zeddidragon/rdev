@@ -1,3 +1,4 @@
+use crate::rdev::UnicodeInfo;
 // This code is awful. Good luck
 use crate::{key_from_code, Event, EventType, GrabError, Keyboard, KeyboardState};
 use log::error;
@@ -43,6 +44,20 @@ pub enum GrabEvent {
     KeyEvent(Event),
 }
 
+#[inline]
+fn is_control(unicode_info: &Option<UnicodeInfo>) -> bool {
+    unicode_info.as_ref().map_or(false, |unicode_info| {
+        unicode_info.name.as_ref().map_or(false, |seq| {
+            for chr in seq.chars() {
+                if chr.is_control() {
+                    return true;
+                }
+            }
+            false
+        })
+    })
+}
+
 fn convert_event(code: u32, is_press: bool) -> Event {
     let key = key_from_code(code);
     let event_type = if is_press {
@@ -53,7 +68,13 @@ fn convert_event(code: u32, is_press: bool) -> Event {
 
     let (unicode, platform_code) = unsafe {
         if let Some(kbd) = &mut KEYBOARD {
-            (kbd.add(&event_type), kbd.keysym())
+            // delete -> \u{7f}
+            let unicode_info = kbd.add(&event_type);
+            if is_control(&unicode_info) {
+                (None, kbd.keysym())
+            } else {
+                (unicode_info, kbd.keysym())
+            }
         } else {
             (None, 0)
         }
