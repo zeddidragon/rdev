@@ -1,10 +1,11 @@
 extern crate x11;
 use crate::linux::keycodes::code_from_key;
 use crate::rdev::{EventType, KeyboardState, UnicodeInfo};
+use std::convert::TryInto;
 use std::ffi::{CStr, CString};
 use std::os::raw::{c_char, c_int, c_uint, c_ulong, c_void};
 use std::ptr::{null, null_mut, NonNull};
-use x11::xlib::{self, XKeysymToString};
+use x11::xlib::{self, KeySym, XKeyEvent, XKeysymToString};
 
 #[derive(Debug)]
 pub struct MyXIM(xlib::XIM);
@@ -162,7 +163,7 @@ impl Keyboard {
         const BUF_LEN: usize = 4;
         let mut buf = [0_u8; BUF_LEN];
         let MyDisplay(display) = *self.display;
-        let key = xlib::XKeyEvent {
+        let mut key = xlib::XKeyEvent {
             display,
             root: 0,
             window: *self.window,
@@ -199,6 +200,16 @@ impl Keyboard {
             &mut *self.keysym,
             &mut *self.status,
         );
+
+        let keysym = xlookup_string(&mut key);
+        self.keysym = Box::new(keysym);
+        if self.is_dead() {
+            return Some(UnicodeInfo {
+                name: None,
+                unicode: Vec::new(),
+                is_dead: true,
+            });
+        }
         if ret == xlib::NoSymbol {
             return None;
         }
@@ -220,7 +231,7 @@ impl Keyboard {
             return None;
         }
 
-        Some(UnicodeInfo{
+        Some(UnicodeInfo {
             name: String::from_utf8(buf[..len].to_vec()).ok(),
             unicode: Vec::new(),
             is_dead: false,
@@ -228,13 +239,17 @@ impl Keyboard {
     }
 
     pub fn is_dead(&mut self) -> bool {
-        unsafe {
-            CStr::from_ptr(XKeysymToString(*self.keysym))
-                .to_str()
-                .unwrap_or_default()
-                .to_owned()
-                .starts_with("dead")
+        let ptr = unsafe { XKeysymToString(*self.keysym) };
+        if ptr.is_null() {
+            false
+        } else {
+            let res = unsafe { CStr::from_ptr(ptr).to_str() };
+            res.unwrap_or_default().to_owned().starts_with("dead")
         }
+    }
+
+    pub fn keysym(&self) -> u32 {
+        (*self.keysym).try_into().unwrap_or_default()
     }
 }
 
@@ -253,6 +268,25 @@ impl KeyboardState for Keyboard {
             _ => None,
         }
     }
+}
+
+/// refs:
+/// 1. https://github.com/mechpen/rterm/blob/b2d04defc13b5688bf75c5de72c0b8810f982dc1/src/x11_wrapper.rs#L357
+/// 2. https://github.com/freedesktop/xev/blob/a92082cb05bb3d6d3f0bebb951133774ca2dd412/xev.c#L125
+pub fn xlookup_string(event: &mut XKeyEvent) -> KeySym {
+    let mut buf = [0u8; 64];
+
+    let mut ksym: KeySym = 0;
+    let _len = unsafe {
+        xlib::XLookupString(
+            event,
+            buf.as_mut_ptr() as *mut _,
+            buf.len() as _,
+            &mut ksym,
+            null_mut(),
+        )
+    };
+    ksym
 }
 
 #[cfg(test)]
