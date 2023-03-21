@@ -341,7 +341,8 @@ pub struct Event {
     pub time: SystemTime,
     pub unicode: Option<UnicodeInfo>,
     pub event_type: EventType,
-
+    // Linux: keysym
+    // WIndows: vkcod
     pub platform_code: u32,
     pub position_code: u32,
 }

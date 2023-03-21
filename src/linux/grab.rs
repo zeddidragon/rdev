@@ -53,11 +53,7 @@ fn convert_event(code: u32, is_press: bool) -> Event {
 
     let (unicode, platform_code) = unsafe {
         if let Some(kbd) = &mut KEYBOARD {
-            if let Some(seq) = kbd.add(&event_type) {
-                (Some(seq), kbd.keysym())
-            } else {
-                (None, 0)
-            }
+            (kbd.add(&event_type), kbd.keysym())
         } else {
             (None, 0)
         }
