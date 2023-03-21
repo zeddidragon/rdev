@@ -67,8 +67,8 @@ fn convert_event(code: u32, is_press: bool) -> Event {
         event_type,
         time: SystemTime::now(),
         unicode,
-        code: platform_code,
-        scan_code: code as _,
+        platform_code,
+        position_code: code as _,
     }
 }
 

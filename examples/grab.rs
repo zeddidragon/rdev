@@ -11,7 +11,10 @@ fn callback(event: Event) -> Option<Event> {
     match event.event_type {
         EventType::KeyPress(_key) | EventType::KeyRelease(_key) => {
             /*  */
-            println!("name: {:?}, type: {:?}, code: {:#04X?}, scan: {:#06X?}", &event.unicode, &event.event_type, &event.code, &event.scan_code);
+            println!(
+                "name: {:?}, type: {:?}, code: {:#04X?}, scan: {:#06X?}",
+                &event.unicode, &event.event_type, &event.platform_code, &event.position_code
+            );
             Some(event)
         }
         _ => Some(event),

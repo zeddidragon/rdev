@@ -37,9 +37,9 @@ fn convert_event(key: RdevKey, is_press: bool) -> Event {
             EventType::KeyRelease(key)
         },
         time: SystemTime::now(),
-        name: None,
-        code: linux_keycode_from_key(key).unwrap_or_default() as _,
-        scan_code: linux_keycode_from_key(key).unwrap_or_default() as _,
+        unicode: None,
+        platform_code: linux_keycode_from_key(key).unwrap_or_default() as _,
+        position_code: linux_keycode_from_key(key).unwrap_or_default() as _,
     }
 }
 
