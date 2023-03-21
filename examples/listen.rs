@@ -73,7 +73,7 @@ fn main() {
         dbg!(is_dead);
 
         #[cfg(target_os = "windows")]
-        let _key = get_win_key(evt.code.into(), evt.scan_code);
+        let _key = get_win_key(evt.platform_code, evt.position_code);
         #[cfg(target_os = "windows")]
         println!("{:?}", _key);
 
