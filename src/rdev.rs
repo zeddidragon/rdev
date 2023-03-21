@@ -341,8 +341,10 @@ pub struct Event {
     pub time: SystemTime,
     pub unicode: Option<UnicodeInfo>,
     pub event_type: EventType,
-    pub code: u16,
-    pub scan_code: u32,
+    // Linux: keysym
+    // WIndows: vkcod
+    pub platform_code: u32,
+    pub position_code: u32,
 }
 
 /// We can define a dummy Keyboard, that we will use to detect

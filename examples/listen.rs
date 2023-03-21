@@ -47,7 +47,10 @@ fn main() {
                     }
                     MUTEX_SPECIAL_KEYS.lock().unwrap().insert(k, true);
                 }
-                println!("keydown {:?} {:?} {:?}", k, evt.code, evt.scan_code);
+                println!(
+                    "keydown {:?} {:?} {:?}",
+                    k, evt.platform_code, evt.position_code
+                );
 
                 (k, 1)
             }
@@ -55,7 +58,10 @@ fn main() {
                 if MUTEX_SPECIAL_KEYS.lock().unwrap().contains_key(&k) {
                     MUTEX_SPECIAL_KEYS.lock().unwrap().insert(k, false);
                 }
-                println!("keyup {:?} {:?} {:?}", k, evt.code, evt.scan_code);
+                println!(
+                    "keyup {:?} {:?} {:?}",
+                    k, evt.platform_code, evt.position_code
+                );
                 (k, 0)
             }
             _ => return,
@@ -67,7 +73,7 @@ fn main() {
         dbg!(is_dead);
 
         #[cfg(target_os = "windows")]
-        let _key = get_win_key(evt.code.into(), evt.scan_code);
+        let _key = get_win_key(evt.platform_code, evt.position_code);
         #[cfg(target_os = "windows")]
         println!("{:?}", _key);
 

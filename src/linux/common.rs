@@ -67,8 +67,8 @@ pub fn convert(
         event_type,
         time: SystemTime::now(),
         unicode,
-        code: code as _,
-        scan_code: code as _,
+        platform_code: code as _,
+        position_code: code as _,
     })
 }
 

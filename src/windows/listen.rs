@@ -27,8 +27,8 @@ unsafe extern "system" fn raw_callback(code: c_int, param: WPARAM, lpdata: LPARA
                 event_type,
                 time: SystemTime::now(),
                 unicode: None,
-                code,
-                scan_code: get_scan_code(lpdata),
+                platform_code: code as _,
+                position_code: get_scan_code(lpdata),
             };
             if let Some(callback) = &mut GLOBAL_CALLBACK {
                 callback(event);

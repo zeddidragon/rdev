@@ -38,8 +38,8 @@ unsafe extern "system" fn raw_callback(code: i32, param: usize, lpdata: isize) -
                 event_type,
                 time: SystemTime::now(),
                 unicode,
-                code,
-                scan_code: get_scan_code(lpdata),
+                platform_code: code as _,
+                position_code: get_scan_code(lpdata),
             };
             if let Some(callback) = &mut GLOBAL_CALLBACK {
                 if callback(event).is_none() {
