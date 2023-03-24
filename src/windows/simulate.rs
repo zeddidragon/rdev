@@ -1,5 +1,6 @@
 use crate::rdev::{Button, EventType, RawKey, SimulateError};
 use crate::windows::keycodes::get_win_codes;
+use crate::Key;
 use std::convert::TryFrom;
 use std::mem::size_of;
 use std::ptr::null_mut;
@@ -21,6 +22,28 @@ static KEYEVENTF_KEYDOWN: DWORD = 0;
 // KEYBDINPUT
 static mut DW_MOUSE_EXTRA_INFO: usize = 0;
 static mut DW_KEYBOARD_EXTRA_INFO: usize = 0;
+
+#[derive(Debug, PartialEq, Eq)]
+struct SimEvent {
+    vkcode: WORD,
+    modifier: Option<Key>,
+}
+
+impl SimEvent {
+    pub fn new(vkcode: WORD) -> SimEvent {
+        SimEvent {
+            vkcode,
+            modifier: None,
+        }
+    }
+
+    pub fn with_modifier(vkcode: WORD, modifier: Key) -> SimEvent {
+        SimEvent {
+            vkcode,
+            modifier: Some(modifier),
+        }
+    }
+}
 
 pub fn set_dw_mouse_extra_info(extra: usize) {
     unsafe { DW_MOUSE_EXTRA_INFO = extra }
@@ -251,17 +274,54 @@ pub fn simulate_code(vk: Option<u16>, scan: Option<u32>, pressed: bool) -> Resul
     sim_keyboard_event(flags as _, keycode, scancode as _)
 }
 
-pub fn simulate_char(chr: char, pressed: bool) -> Result<(), SimulateError> {
-    // send char
+/// 1 Either SHIFT key is pressed.
+/// 2 Either CTRL key is pressed.
+/// 4 Either ALT key is pressed.
+/// FIXME:
+/// 8 The Hankaku key is pressed
+/// 16 Reserved (defined by the keyboard layout driver).
+/// 32 Reserved (defined by the keyboard layout driver).
+/// refs: https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-vkkeyscanw
+#[inline]
+fn char_to_sim_event(chr: char) -> Option<SimEvent> {
     let res = unsafe { VkKeyScanW(chr as u16) };
-    let (vk, scan, flags): (i32, u16, u16) = if (res >> 8) & 0xFF == 0 {
-        ((res & 0xFF).into(), 0, 0)
-    } else {
-        (0, chr as _, KEYEVENTF_UNICODE as _)
-    };
+    let vkcode = (res & 0xFF) as WORD;
+    let flag = res >> 8;
+    match flag {
+        -1 => None,
+        0 => Some(SimEvent::new(vkcode)),
+        1 => Some(SimEvent::with_modifier(vkcode, Key::ShiftLeft)),
+        2 => Some(SimEvent::with_modifier(vkcode, Key::ControlLeft)),
+        4 => Some(SimEvent::with_modifier(vkcode, Key::Alt)),
+        _ => None,
+    }
+}
 
-    let state_flags = if pressed { 0 } else { KEYEVENTF_KEYUP as _ };
-    sim_keyboard_event((flags | state_flags).into(), vk as _, scan)
+fn simulate_vkcode(vkcode: WORD, press: bool) -> Result<(), SimulateError> {
+    if press {
+        sim_keyboard_event(KEYEVENTF_KEYDOWN, vkcode, 0)
+    } else {
+        sim_keyboard_event(KEYEVENTF_KEYUP, vkcode, 0)
+    }
+}
+
+pub fn simulate_char(chr: char) -> Result<(), SimulateError> {
+    // send char
+    if let Some(sim_event) = char_to_sim_event(chr) {
+        if let Some(modifier) = sim_event.modifier {
+            simulate(&EventType::KeyPress(modifier))?;
+            simulate_vkcode(sim_event.vkcode, true)?;
+            simulate_vkcode(sim_event.vkcode, true)?;
+            simulate(&EventType::KeyRelease(modifier))?;
+            Ok(())
+        } else {
+            simulate_vkcode(sim_event.vkcode, true)?;
+            simulate_vkcode(sim_event.vkcode, true)?;
+            Ok(())
+        }
+    } else {
+        simulate_unicode(chr as u16)
+    }
 }
 
 pub fn simulate_unicode(unicode: u16) -> Result<(), SimulateError> {
@@ -275,4 +335,51 @@ pub fn simulate_unistr(unistr: &str) -> Result<(), SimulateError> {
         simulate_unicode(unicode)?;
     }
     Ok(())
+}
+
+mod test {
+    #[allow(unused_imports)]
+    use super::*;
+
+    #[test]
+    fn test_convert_char() {
+        // If the function succeeds, the low-order byte of the return value contains the
+        // virtual-key code and the high-order byte contains the shift state,
+        // which can be a combination of the following flag bits.
+
+        // In US keyboard.
+        let chr = 'a';
+        let sim_event = char_to_sim_event(chr);
+        assert_eq!(
+            sim_event,
+            Some(SimEvent {
+                vkcode: 65,
+                modifier: None,
+            },)
+        );
+
+        let chr = 'A';
+        let sim_event = char_to_sim_event(chr);
+        assert_eq!(
+            sim_event,
+            Some(SimEvent {
+                vkcode: 65,
+                modifier: Some(Key::ShiftLeft),
+            },)
+        );
+
+        let chr = '&';
+        let sim_event = char_to_sim_event(chr);
+        assert_eq!(
+            sim_event,
+            Some(SimEvent {
+                vkcode: 55,
+                modifier: Some(Key::ShiftLeft),
+            },)
+        );
+
+        let chr = 'é';
+        let sim_event = char_to_sim_event(chr);
+        assert_eq!(sim_event, None);
+    }
 }
