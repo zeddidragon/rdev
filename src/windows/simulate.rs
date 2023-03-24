@@ -9,13 +9,13 @@ use winapi::shared::minwindef::{DWORD, LOWORD, UINT, WORD};
 use winapi::shared::ntdef::LONG;
 use winapi::um::winuser::{
     GetForegroundWindow, GetKeyboardLayout, GetSystemMetrics, GetWindowThreadProcessId, INPUT_u,
-    MapVirtualKeyExW, SendInput, VkKeyScanW, INPUT, INPUT_KEYBOARD, INPUT_MOUSE,
-    KEYBDINPUT, KEYEVENTF_EXTENDEDKEY, KEYEVENTF_KEYUP, KEYEVENTF_SCANCODE, KEYEVENTF_UNICODE,
-    MAPVK_VSC_TO_VK_EX, MOUSEEVENTF_ABSOLUTE, MOUSEEVENTF_HWHEEL,
-    MOUSEEVENTF_LEFTDOWN, MOUSEEVENTF_LEFTUP, MOUSEEVENTF_MIDDLEDOWN, MOUSEEVENTF_MIDDLEUP,
-    MOUSEEVENTF_MOVE, MOUSEEVENTF_RIGHTDOWN, MOUSEEVENTF_RIGHTUP, MOUSEEVENTF_VIRTUALDESK,
-    MOUSEEVENTF_WHEEL, MOUSEEVENTF_XDOWN, MOUSEEVENTF_XUP, MOUSEINPUT, SM_CXVIRTUALSCREEN,
-    SM_CYVIRTUALSCREEN, WHEEL_DELTA,
+    MapVirtualKeyExW, SendInput, VkKeyScanW, INPUT, INPUT_KEYBOARD, INPUT_MOUSE, KEYBDINPUT,
+    KEYEVENTF_EXTENDEDKEY, KEYEVENTF_KEYUP, KEYEVENTF_SCANCODE, KEYEVENTF_UNICODE,
+    MAPVK_VSC_TO_VK_EX, MOUSEEVENTF_ABSOLUTE, MOUSEEVENTF_HWHEEL, MOUSEEVENTF_LEFTDOWN,
+    MOUSEEVENTF_LEFTUP, MOUSEEVENTF_MIDDLEDOWN, MOUSEEVENTF_MIDDLEUP, MOUSEEVENTF_MOVE,
+    MOUSEEVENTF_RIGHTDOWN, MOUSEEVENTF_RIGHTUP, MOUSEEVENTF_VIRTUALDESK, MOUSEEVENTF_WHEEL,
+    MOUSEEVENTF_XDOWN, MOUSEEVENTF_XUP, MOUSEINPUT, SM_CXVIRTUALSCREEN, SM_CYVIRTUALSCREEN,
+    WHEEL_DELTA,
 };
 /// Not defined in win32 but define here for clarity
 static KEYEVENTF_KEYDOWN: DWORD = 0;
@@ -118,25 +118,18 @@ pub fn simulate(event_type: &EventType) -> Result<(), SimulateError> {
     match event_type {
         EventType::KeyPress(key) => {
             match key {
-                crate::Key::RawKey(raw_key) => {
-                    match raw_key {
-                        RawKey::ScanCode(scancode) => {
-                            let flags = if (scancode >> 8) == 0xE0 || (scancode >> 8) == 0xE1 {
-                                KEYEVENTF_EXTENDEDKEY | KEYEVENTF_SCANCODE
-                                
-                            } else {
-                                KEYEVENTF_SCANCODE
-                            };
-                            sim_keyboard_event(flags, 0, *scancode as _)
-                        }
-                        RawKey::WinVirtualKeycode(vk) => {
-                            sim_keyboard_event(0, *vk as _, 0)
-                        }
-                        _ => {
-                            Err(SimulateError)
-                        }
+                crate::Key::RawKey(raw_key) => match raw_key {
+                    RawKey::ScanCode(scancode) => {
+                        let flags = if (scancode >> 8) == 0xE0 || (scancode >> 8) == 0xE1 {
+                            KEYEVENTF_EXTENDEDKEY | KEYEVENTF_SCANCODE
+                        } else {
+                            KEYEVENTF_SCANCODE
+                        };
+                        sim_keyboard_event(flags, 0, *scancode as _)
                     }
-                }
+                    RawKey::WinVirtualKeycode(vk) => sim_keyboard_event(0, *vk as _, 0),
+                    _ => Err(SimulateError),
+                },
                 _ => {
                     let layout = unsafe {
                         let current_window_thread_id =
@@ -160,25 +153,20 @@ pub fn simulate(event_type: &EventType) -> Result<(), SimulateError> {
         }
         EventType::KeyRelease(key) => {
             match key {
-                crate::Key::RawKey(raw_key) => {
-                    match raw_key {
-                        RawKey::ScanCode(scancode) => {
-                            let flags = if (scancode >> 8) == 0xE0 || (scancode >> 8) == 0xE1 {
-                                KEYEVENTF_KEYUP | KEYEVENTF_EXTENDEDKEY | KEYEVENTF_SCANCODE
-                                
-                            } else {
-                                KEYEVENTF_KEYUP | KEYEVENTF_SCANCODE
-                            };
-                            sim_keyboard_event(flags, 0, *scancode as _)
-                        }
-                        RawKey::WinVirtualKeycode(vk) => {
-                            sim_keyboard_event(KEYEVENTF_KEYUP, *vk as _, 0)
-                        }
-                        _ => {
-                            Err(SimulateError)
-                        }
+                crate::Key::RawKey(raw_key) => match raw_key {
+                    RawKey::ScanCode(scancode) => {
+                        let flags = if (scancode >> 8) == 0xE0 || (scancode >> 8) == 0xE1 {
+                            KEYEVENTF_KEYUP | KEYEVENTF_EXTENDEDKEY | KEYEVENTF_SCANCODE
+                        } else {
+                            KEYEVENTF_KEYUP | KEYEVENTF_SCANCODE
+                        };
+                        sim_keyboard_event(flags, 0, *scancode as _)
                     }
-                }
+                    RawKey::WinVirtualKeycode(vk) => {
+                        sim_keyboard_event(KEYEVENTF_KEYUP, *vk as _, 0)
+                    }
+                    _ => Err(SimulateError),
+                },
                 _ => {
                     let (code, scancode) = get_win_codes(*key).ok_or(SimulateError)?;
                     let code = if code == 165 {
@@ -247,7 +235,11 @@ pub fn simulate(event_type: &EventType) -> Result<(), SimulateError> {
     }
 }
 
-pub fn simulate_code(vk: Option<u16>, scan: Option<u32>, pressed: bool) -> Result<(), SimulateError> {
+pub fn simulate_code(
+    vk: Option<u16>,
+    scan: Option<u32>,
+    pressed: bool,
+) -> Result<(), SimulateError> {
     let keycode;
     let scancode;
     let mut flags;

@@ -1,5 +1,8 @@
 use rdev::{simulate, EventType, Key, SimulateError};
-use std::{thread::{self, sleep_ms}, time};
+use std::{
+    thread::{self, sleep_ms},
+    time,
+};
 
 fn send(event_type: &EventType) {
     let delay = time::Duration::from_millis(20);

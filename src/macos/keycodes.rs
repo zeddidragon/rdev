@@ -1,7 +1,7 @@
 #![allow(non_upper_case_globals)]
 
-use crate::rdev::Key;
 use super::virtual_keycodes::*;
+use crate::rdev::Key;
 
 macro_rules! decl_keycodes {
     ($($key:ident, $code:ident),*) => {

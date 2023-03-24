@@ -1,14 +1,9 @@
 #[cfg(target_os = "windows")]
 use rdev::get_win_key;
-use rdev::{
-    Event,
-    EventType::*,
-    Key as RdevKey, Keyboard as RdevKeyboard, KeyboardState,
-};
-use std::{sync::Arc};
+use rdev::{Event, EventType::*, Key as RdevKey, Keyboard as RdevKeyboard, KeyboardState};
+use std::collections::HashMap;
+use std::sync::Arc;
 use std::sync::Mutex;
-use std::{collections::HashMap};
-
 
 lazy_static::lazy_static! {
     static ref MUTEX_SPECIAL_KEYS: Mutex<HashMap<RdevKey, bool>> = {
@@ -25,7 +20,7 @@ lazy_static::lazy_static! {
 
         Mutex::new(m)
 
-        
+
     };
 }
 
