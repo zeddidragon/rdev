@@ -35,7 +35,9 @@ where
 {
     let mut types = kCGEventMaskForAllEvents;
     if crate::keyboard_only() {
-        types = (1 << CGEventType::KeyDown as u64) + (1 << CGEventType::KeyUp as u64) + (1 << CGEventType::FlagsChanged as u64);
+        types = (1 << CGEventType::KeyDown as u64)
+            + (1 << CGEventType::KeyUp as u64)
+            + (1 << CGEventType::FlagsChanged as u64);
     }
     unsafe {
         GLOBAL_CALLBACK = Some(Box::new(callback));

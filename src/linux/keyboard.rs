@@ -301,7 +301,11 @@ mod tests {
     /// XCB doc is sparse on the web let's say.
     fn test_thread_safety() {
         let mut keyboard = Keyboard::new().unwrap();
-        let char_s = keyboard.add(&EventType::KeyPress(crate::rdev::Key::KeyS)).unwrap().name.unwrap();
+        let char_s = keyboard
+            .add(&EventType::KeyPress(crate::rdev::Key::KeyS))
+            .unwrap()
+            .name
+            .unwrap();
         assert_eq!(
             char_s,
             "s".to_string(),
@@ -313,7 +317,11 @@ mod tests {
     #[ignore]
     fn test_thread_safety_2() {
         let mut keyboard = Keyboard::new().unwrap();
-        let char_s = keyboard.add(&EventType::KeyPress(crate::rdev::Key::KeyS)).unwrap().name.unwrap();
+        let char_s = keyboard
+            .add(&EventType::KeyPress(crate::rdev::Key::KeyS))
+            .unwrap()
+            .name
+            .unwrap();
         assert_eq!(
             char_s,
             "s".to_string(),

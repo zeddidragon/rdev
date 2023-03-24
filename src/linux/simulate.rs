@@ -1,6 +1,6 @@
 use crate::linux::common::{FALSE, TRUE};
 use crate::linux::keycodes::code_from_key;
-use crate::rdev::{Button, EventType, SimulateError, RawKey};
+use crate::rdev::{Button, EventType, RawKey, SimulateError};
 use std::convert::TryInto;
 use std::os::raw::c_int;
 use std::ptr::null;
@@ -9,36 +9,32 @@ use x11::xtest;
 
 unsafe fn send_native(event_type: &EventType, display: *mut xlib::Display) -> Option<()> {
     let res = match event_type {
-        EventType::KeyPress(key) => {
-            match key {
-                crate::Key::RawKey(rawkey) => {
-                    if let RawKey::LinuxXorgKeycode(keycode) = rawkey {
-                        xtest::XTestFakeKeyEvent(display, *keycode as _, TRUE, 0)
-                    } else {
-                        return None;
-                    }
-                }
-                _ => {
-                    let code = code_from_key(*key)?;
-                    xtest::XTestFakeKeyEvent(display, code, TRUE, 0)
+        EventType::KeyPress(key) => match key {
+            crate::Key::RawKey(rawkey) => {
+                if let RawKey::LinuxXorgKeycode(keycode) = rawkey {
+                    xtest::XTestFakeKeyEvent(display, *keycode as _, TRUE, 0)
+                } else {
+                    return None;
                 }
             }
-        }
-        EventType::KeyRelease(key) => {
-            match key {
-                crate::Key::RawKey(rawkey) => {
-                    if let RawKey::LinuxXorgKeycode(keycode) = rawkey {
-                        xtest::XTestFakeKeyEvent(display, *keycode as _, FALSE, 0)
-                    } else {
-                        return None;
-                    }
-                }
-                _ => {
-                    let code = code_from_key(*key)?;
-                    xtest::XTestFakeKeyEvent(display, code, FALSE, 0)
+            _ => {
+                let code = code_from_key(*key)?;
+                xtest::XTestFakeKeyEvent(display, code, TRUE, 0)
+            }
+        },
+        EventType::KeyRelease(key) => match key {
+            crate::Key::RawKey(rawkey) => {
+                if let RawKey::LinuxXorgKeycode(keycode) = rawkey {
+                    xtest::XTestFakeKeyEvent(display, *keycode as _, FALSE, 0)
+                } else {
+                    return None;
                 }
             }
-        }
+            _ => {
+                let code = code_from_key(*key)?;
+                xtest::XTestFakeKeyEvent(display, code, FALSE, 0)
+            }
+        },
         EventType::ButtonPress(button) => match button {
             Button::Left => xtest::XTestFakeButtonEvent(display, 1, TRUE, 0),
             Button::Middle => xtest::XTestFakeButtonEvent(display, 2, TRUE, 0),

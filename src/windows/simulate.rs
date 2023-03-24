@@ -1,5 +1,7 @@
 use crate::rdev::{Button, EventType, RawKey, SimulateError};
 use crate::windows::keycodes::get_win_codes;
+use crate::Key;
+use std::collections::HashSet;
 use std::convert::TryFrom;
 use std::mem::size_of;
 use std::ptr::null_mut;
@@ -8,13 +10,13 @@ use winapi::shared::minwindef::{DWORD, LOWORD, UINT, WORD};
 use winapi::shared::ntdef::LONG;
 use winapi::um::winuser::{
     GetForegroundWindow, GetKeyboardLayout, GetSystemMetrics, GetWindowThreadProcessId, INPUT_u,
-    MapVirtualKeyExW, SendInput, VkKeyScanW, INPUT, INPUT_KEYBOARD, INPUT_MOUSE,
-    KEYBDINPUT, KEYEVENTF_EXTENDEDKEY, KEYEVENTF_KEYUP, KEYEVENTF_SCANCODE, KEYEVENTF_UNICODE,
-    MAPVK_VSC_TO_VK_EX, MOUSEEVENTF_ABSOLUTE, MOUSEEVENTF_HWHEEL,
-    MOUSEEVENTF_LEFTDOWN, MOUSEEVENTF_LEFTUP, MOUSEEVENTF_MIDDLEDOWN, MOUSEEVENTF_MIDDLEUP,
-    MOUSEEVENTF_MOVE, MOUSEEVENTF_RIGHTDOWN, MOUSEEVENTF_RIGHTUP, MOUSEEVENTF_VIRTUALDESK,
-    MOUSEEVENTF_WHEEL, MOUSEEVENTF_XDOWN, MOUSEEVENTF_XUP, MOUSEINPUT, SM_CXVIRTUALSCREEN,
-    SM_CYVIRTUALSCREEN, WHEEL_DELTA,
+    MapVirtualKeyExW, SendInput, VkKeyScanW, INPUT, INPUT_KEYBOARD, INPUT_MOUSE, KEYBDINPUT,
+    KEYEVENTF_EXTENDEDKEY, KEYEVENTF_KEYUP, KEYEVENTF_SCANCODE, KEYEVENTF_UNICODE,
+    MAPVK_VSC_TO_VK_EX, MOUSEEVENTF_ABSOLUTE, MOUSEEVENTF_HWHEEL, MOUSEEVENTF_LEFTDOWN,
+    MOUSEEVENTF_LEFTUP, MOUSEEVENTF_MIDDLEDOWN, MOUSEEVENTF_MIDDLEUP, MOUSEEVENTF_MOVE,
+    MOUSEEVENTF_RIGHTDOWN, MOUSEEVENTF_RIGHTUP, MOUSEEVENTF_VIRTUALDESK, MOUSEEVENTF_WHEEL,
+    MOUSEEVENTF_XDOWN, MOUSEEVENTF_XUP, MOUSEINPUT, SM_CXVIRTUALSCREEN, SM_CYVIRTUALSCREEN,
+    WHEEL_DELTA,
 };
 /// Not defined in win32 but define here for clarity
 static KEYEVENTF_KEYDOWN: DWORD = 0;
@@ -95,25 +97,18 @@ pub fn simulate(event_type: &EventType) -> Result<(), SimulateError> {
     match event_type {
         EventType::KeyPress(key) => {
             match key {
-                crate::Key::RawKey(raw_key) => {
-                    match raw_key {
-                        RawKey::ScanCode(scancode) => {
-                            let flags = if (scancode >> 8) == 0xE0 || (scancode >> 8) == 0xE1 {
-                                KEYEVENTF_EXTENDEDKEY | KEYEVENTF_SCANCODE
-                                
-                            } else {
-                                KEYEVENTF_SCANCODE
-                            };
-                            sim_keyboard_event(flags, 0, *scancode as _)
-                        }
-                        RawKey::WinVirtualKeycode(vk) => {
-                            sim_keyboard_event(0, *vk as _, 0)
-                        }
-                        _ => {
-                            Err(SimulateError)
-                        }
+                crate::Key::RawKey(raw_key) => match raw_key {
+                    RawKey::ScanCode(scancode) => {
+                        let flags = if (scancode >> 8) == 0xE0 || (scancode >> 8) == 0xE1 {
+                            KEYEVENTF_EXTENDEDKEY | KEYEVENTF_SCANCODE
+                        } else {
+                            KEYEVENTF_SCANCODE
+                        };
+                        sim_keyboard_event(flags, 0, *scancode as _)
                     }
-                }
+                    RawKey::WinVirtualKeycode(vk) => sim_keyboard_event(0, *vk as _, 0),
+                    _ => Err(SimulateError),
+                },
                 _ => {
                     let layout = unsafe {
                         let current_window_thread_id =
@@ -137,25 +132,20 @@ pub fn simulate(event_type: &EventType) -> Result<(), SimulateError> {
         }
         EventType::KeyRelease(key) => {
             match key {
-                crate::Key::RawKey(raw_key) => {
-                    match raw_key {
-                        RawKey::ScanCode(scancode) => {
-                            let flags = if (scancode >> 8) == 0xE0 || (scancode >> 8) == 0xE1 {
-                                KEYEVENTF_KEYUP | KEYEVENTF_EXTENDEDKEY | KEYEVENTF_SCANCODE
-                                
-                            } else {
-                                KEYEVENTF_KEYUP | KEYEVENTF_SCANCODE
-                            };
-                            sim_keyboard_event(flags, 0, *scancode as _)
-                        }
-                        RawKey::WinVirtualKeycode(vk) => {
-                            sim_keyboard_event(KEYEVENTF_KEYUP, *vk as _, 0)
-                        }
-                        _ => {
-                            Err(SimulateError)
-                        }
+                crate::Key::RawKey(raw_key) => match raw_key {
+                    RawKey::ScanCode(scancode) => {
+                        let flags = if (scancode >> 8) == 0xE0 || (scancode >> 8) == 0xE1 {
+                            KEYEVENTF_KEYUP | KEYEVENTF_EXTENDEDKEY | KEYEVENTF_SCANCODE
+                        } else {
+                            KEYEVENTF_KEYUP | KEYEVENTF_SCANCODE
+                        };
+                        sim_keyboard_event(flags, 0, *scancode as _)
                     }
-                }
+                    RawKey::WinVirtualKeycode(vk) => {
+                        sim_keyboard_event(KEYEVENTF_KEYUP, *vk as _, 0)
+                    }
+                    _ => Err(SimulateError),
+                },
                 _ => {
                     let (code, scancode) = get_win_codes(*key).ok_or(SimulateError)?;
                     let code = if code == 165 {
@@ -224,7 +214,11 @@ pub fn simulate(event_type: &EventType) -> Result<(), SimulateError> {
     }
 }
 
-pub fn simulate_code(vk: Option<u16>, scan: Option<u32>, pressed: bool) -> Result<(), SimulateError> {
+pub fn simulate_code(
+    vk: Option<u16>,
+    scan: Option<u32>,
+    pressed: bool,
+) -> Result<(), SimulateError> {
     let keycode;
     let scancode;
     let mut flags;
@@ -251,17 +245,64 @@ pub fn simulate_code(vk: Option<u16>, scan: Option<u32>, pressed: bool) -> Resul
     sim_keyboard_event(flags as _, keycode, scancode as _)
 }
 
-pub fn simulate_char(chr: char, pressed: bool) -> Result<(), SimulateError> {
-    // send char
-    let res = unsafe { VkKeyScanW(chr as u16) };
-    let (vk, scan, flags): (i32, u16, u16) = if (res >> 8) & 0xFF == 0 {
-        ((res & 0xFF).into(), 0, 0)
-    } else {
-        (0, chr as _, KEYEVENTF_UNICODE as _)
-    };
+/// 1 Either SHIFT key is pressed.
+/// 2 Either CTRL key is pressed.
+/// 4 Either ALT key is pressed.
+/// FIXME:
+/// 8 The Hankaku key is pressed
+/// 16 Reserved (defined by the keyboard layout driver).
+/// 32 Reserved (defined by the keyboard layout driver).
+/// refs: https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-vkkeyscanw
+#[inline]
+fn char_to_vk(chr: char) -> Option<(WORD, HashSet<Key>)> {
+    let mut modifiers: HashSet<Key> = HashSet::new();
 
-    let state_flags = if pressed { 0 } else { KEYEVENTF_KEYUP as _ };
-    sim_keyboard_event((flags | state_flags).into(), vk as _, scan)
+    let res = unsafe { VkKeyScanW(chr as u16) };
+    let vkcode = (res & 0xFF) as WORD;
+    let flag = res >> 8;
+
+    if flag & 0b0000_0001 != 0 {
+        modifiers.insert(Key::ShiftLeft);
+    }
+
+    if flag & 0b0000_0010 != 0 {
+        modifiers.insert(Key::ControlLeft);
+    }
+
+    if flag & 0b0000_0100 != 0 {
+        modifiers.insert(Key::Alt);
+    }
+
+    if flag == -1 {
+        None
+    } else {
+        Some((vkcode, modifiers))
+    }
+}
+
+fn simulate_vkcode(vkcode: WORD, press: bool) -> Result<(), SimulateError> {
+    if press {
+        sim_keyboard_event(KEYEVENTF_KEYDOWN, vkcode, 0)
+    } else {
+        sim_keyboard_event(KEYEVENTF_KEYUP, vkcode, 0)
+    }
+}
+
+pub fn simulate_char(chr: char) -> Result<(), SimulateError> {
+    // send char
+    if let Some(res) = char_to_vk(chr) {
+        for key in &res.1 {
+            simulate(&EventType::KeyPress(*key))?;
+        }
+        simulate_vkcode(res.0, true)?;
+        simulate_vkcode(res.0, false)?;
+        for key in &res.1 {
+            simulate(&EventType::KeyRelease(*key))?;
+        }
+        Ok(())
+    } else {
+        simulate_unicode(chr as u16)
+    }
 }
 
 pub fn simulate_unicode(unicode: u16) -> Result<(), SimulateError> {

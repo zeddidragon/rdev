@@ -61,7 +61,7 @@ pub enum GrabError {
     /// All
     SimulateError,
 
-    IoError(std::io::Error)
+    IoError(std::io::Error),
 }
 
 // impl From<std::io::Error> for GrabError {
@@ -202,9 +202,9 @@ pub enum Key {
     Quote,
     BackSlash,
     IntlBackslash,
-    IntlRo,         // Brazilian /? and Japanese _ 'ro'
-    IntlYen,        // Japanese Henkan (Convert) key.
-    KanaMode,       // Japanese Hiragana/Katakana key.
+    IntlRo,   // Brazilian /? and Japanese _ 'ro'
+    IntlYen,  // Japanese Henkan (Convert) key.
+    KanaMode, // Japanese Hiragana/Katakana key.
     KeyZ,
     KeyX,
     KeyC,
@@ -237,11 +237,11 @@ pub enum Key {
     VolumeUp,
     VolumeDown,
     VolumeMute,
-    Lang1,  // Korean Hangul/English toggle key, and as the Kana key on the Apple Japanese keyboard.
-    Lang2,  // Korean Hanja conversion key, and as the Eisu key on the Apple Japanese keyboard.
-    Lang3,  // Japanese Katakana key.
-    Lang4,  // Japanese Hiragana key.
-    Lang5,  // Japanese Zenkaku/Hankaku (Fullwidth/halfwidth) key.
+    Lang1, // Korean Hangul/English toggle key, and as the Kana key on the Apple Japanese keyboard.
+    Lang2, // Korean Hanja conversion key, and as the Eisu key on the Apple Japanese keyboard.
+    Lang3, // Japanese Katakana key.
+    Lang4, // Japanese Hiragana key.
+    Lang5, // Japanese Zenkaku/Hankaku (Fullwidth/halfwidth) key.
     Function,
     Apps,
     Cancel,

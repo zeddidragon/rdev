@@ -31,7 +31,6 @@ const NSEventModifierFlagOption: u64 = 1 << 19;
 const NSEventModifierFlagCommand: u64 = 1 << 20;
 const BUF_LEN: usize = 4;
 
-
 #[allow(non_upper_case_globals, dead_code)]
 const cmdKeyBit: u32 = 8;
 #[allow(non_upper_case_globals, dead_code)]
@@ -58,7 +57,6 @@ const controlKey: u32 = 1 << controlKeyBit;
 lazy_static::lazy_static! {
     static ref QUEUE: dispatch::Queue = dispatch::Queue::main();
 }
-
 
 #[cfg(target_os = "macos")]
 #[link(name = "Cocoa", kind = "framework")]
@@ -89,7 +87,7 @@ pub struct Keyboard {
     is_main_thread: bool,
     dead_state: u32,
     shift: bool,
-    alt: bool,  // options
+    alt: bool, // options
     caps_lock: bool,
 }
 
@@ -109,11 +107,11 @@ impl Keyboard {
     }
 
     fn modifier_state(&self) -> ModifierState {
-        if self.alt && (self.shift || self.caps_lock)  {
+        if self.alt && (self.shift || self.caps_lock) {
             10
         } else if self.alt && !(self.shift || self.caps_lock) {
             8
-        }else if !self.alt && (self.caps_lock || self.shift) {
+        } else if !self.alt && (self.caps_lock || self.shift) {
             2
         } else {
             0
@@ -128,7 +126,9 @@ impl Keyboard {
         flags: CGEventFlags,
     ) -> Option<UnicodeInfo> {
         let flags_bits = flags.bits();
-        if flags_bits & NSEventModifierFlagCommand != 0 || flags_bits & NSEventModifierFlagControl != 0 {
+        if flags_bits & NSEventModifierFlagCommand != 0
+            || flags_bits & NSEventModifierFlagControl != 0
+        {
             return None;
         }
 
@@ -212,7 +212,7 @@ impl Keyboard {
         let mut cur_is_dead = self.is_dead();
         if last_dead_state == 0 {
             if self.dead_state != 0 {
-                return Some(UnicodeInfo{
+                return Some(UnicodeInfo {
                     name: None,
                     unicode: Vec::new(),
                     is_dead: cur_is_dead,
@@ -242,9 +242,9 @@ impl Keyboard {
         {
             return None;
         }
-        
+
         let unicode = buff[..length].to_vec();
-        Some(UnicodeInfo{
+        Some(UnicodeInfo {
             name: String::from_utf16(&unicode).ok(),
             unicode,
             is_dead: cur_is_dead,

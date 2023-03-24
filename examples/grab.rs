@@ -26,7 +26,7 @@ fn main() {
     let delay = Duration::from_secs(5);
 
     println!("[*] starting grab listen...");
-    if let Err(err) = start_grab_listen(callback){
+    if let Err(err) = start_grab_listen(callback) {
         eprintln!("start grab listen error: {:?}", err);
         return;
     };
