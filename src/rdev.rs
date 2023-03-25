@@ -264,14 +264,19 @@ pub enum Key {
     RawKey(RawKey),
 }
 
+#[cfg(not(target_os="macos"))]
+pub type KeyCode = u32;
+#[cfg(target_os="macos")]
+pub type KeyCode = crate::CGKeyCode;
+
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, EnumIter)]
 #[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 pub enum RawKey {
-    ScanCode(u32),
-    WinVirtualKeycode(u32),
-    LinuxXorgKeycode(u32),
-    LinuxConsoleKeycode(u32),
-    MacVirtualKeycode(u32),
+    ScanCode(KeyCode),
+    WinVirtualKeycode(KeyCode),
+    LinuxXorgKeycode(KeyCode),
+    LinuxConsoleKeycode(KeyCode),
+    MacVirtualKeycode(KeyCode),
 }
 
 impl Default for RawKey {

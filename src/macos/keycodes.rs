@@ -6,7 +6,7 @@ use crate::rdev::Key;
 macro_rules! decl_keycodes {
     ($($key:ident, $code:ident),*) => {
         //TODO: make const when rust lang issue #49146 is fixed
-        pub fn code_from_key(key: Key) -> Option<u32> {
+        pub fn code_from_key(key: Key) -> Option<CGKeyCode> {
             match key {
                 $(
                     Key::$key => Some($code),
@@ -18,7 +18,7 @@ macro_rules! decl_keycodes {
 
         //TODO: make const when rust lang issue #49146 is fixed
         #[allow(dead_code)]
-        pub fn key_from_code(code: u32) -> Key {
+        pub fn key_from_code(code: CGKeyCode) -> Key {
             match code {
                 $(
                     $code => Key::$key,

@@ -2,11 +2,12 @@ use super::virtual_keycodes::{
     kVK_DownArrow, kVK_End, kVK_ForwardDelete, kVK_Help, kVK_Home, kVK_LeftArrow, kVK_PageDown,
     kVK_PageUp, kVK_RightArrow, kVK_UpArrow,
 };
-use crate::macos::keycodes::code_from_key;
+use crate::macos::{common::CGEventSourceKeyState, keycodes::code_from_key};
 use crate::rdev::{Button, EventType, RawKey, SimulateError};
 use core_graphics::{
     event::{
-        CGEvent, CGEventFlags, CGEventTapLocation, CGEventType, CGMouseButton, ScrollEventUnit,
+        CGEvent, CGEventFlags, CGEventTapLocation, CGEventType, CGKeyCode, CGMouseButton,
+        ScrollEventUnit,
     },
     event_source::{CGEventSource, CGEventSourceStateID},
     geometry::CGPoint,
@@ -14,7 +15,7 @@ use core_graphics::{
 use std::convert::TryInto;
 
 #[allow(non_upper_case_globals)]
-fn workaround_fn(event: CGEvent, keycode: u32) -> CGEvent {
+fn workaround_fn(event: CGEvent, keycode: CGKeyCode) -> CGEvent {
     match keycode {
         kVK_Help | kVK_ForwardDelete | kVK_Home | kVK_End | kVK_PageDown | kVK_PageUp => {
             let flags = event.get_flags();
@@ -151,10 +152,10 @@ pub struct VirtualInput {
 }
 
 impl VirtualInput {
-    pub fn new(state_id: CGEventSourceStateID, tab_loc: CGEventTapLocation) -> Result<Self, ()> {
+    pub fn new(state_id: CGEventSourceStateID, tap_loc: CGEventTapLocation) -> Result<Self, ()> {
         Ok(Self {
             source: CGEventSource::new(state_id)?,
-            tap_loc: tab_loc,
+            tap_loc,
         })
     }
 
@@ -167,5 +168,10 @@ impl VirtualInput {
                 Err(SimulateError)
             }
         }
+    }
+
+    // keycode is defined in rdev::macos::virtual_keycodes
+    pub fn get_key_state(state_id: CGEventSourceStateID, keycode: CGKeyCode) -> bool {
+        unsafe { CGEventSourceKeyState(state_id, keycode) }
     }
 }

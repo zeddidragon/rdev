@@ -3,7 +3,10 @@ use super::virtual_keycodes::*;
 use crate::macos::keyboard::Keyboard;
 use crate::rdev::{Button, Event, EventType, Key};
 use cocoa::base::id;
-use core_graphics::event::{CGEvent, CGEventFlags, CGEventTapLocation, CGEventType, EventField};
+use core_graphics::{
+    event::{CGEvent, CGEventFlags, CGEventTapLocation, CGEventType, CGKeyCode, EventField},
+    event_source::CGEventSourceStateID,
+};
 use lazy_static::lazy_static;
 use std::convert::TryInto;
 use std::os::raw::c_void;
@@ -82,6 +85,7 @@ extern "C" {
         callback: QCallback,
         user_info: id,
     ) -> CFMachPortRef;
+    pub fn CGEventSourceKeyState(state_id: CGEventSourceStateID, key: CGKeyCode) -> bool;
     pub fn CFMachPortCreateRunLoopSource(
         allocator: CFAllocatorRef,
         tap: CFMachPortRef,
@@ -95,7 +99,6 @@ extern "C" {
     pub static kCFRunLoopCommonModes: CFRunLoopMode;
 }
 
-#[cfg(target_os = "macos")]
 #[allow(improper_ctypes)]
 #[allow(non_snake_case)]
 #[link(name = "Carbon", kind = "framework")]
@@ -119,7 +122,7 @@ fn kb_get_layout_type() -> PhysicalKeyboardLayoutType {
 
 #[cfg(target_os = "macos")]
 #[allow(non_upper_case_globals)]
-pub fn map_keycode(code: u32) -> u32 {
+pub fn map_keycode(code: CGKeyCode) -> CGKeyCode {
     match code {
         kVK_ISO_Section => {
             if kb_get_layout_type() == kKeyboardISO {
@@ -144,7 +147,7 @@ pub fn set_is_main_thread(b: bool) {
 }
 
 #[inline]
-unsafe fn get_code(cg_event: &CGEvent) -> Option<u32> {
+unsafe fn get_code(cg_event: &CGEvent) -> Option<CGKeyCode> {
     cg_event
         .get_integer_value_field(EventField::KEYBOARD_EVENT_KEYCODE)
         .try_into()

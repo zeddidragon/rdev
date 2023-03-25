@@ -15,7 +15,7 @@ use crate::Key;
 macro_rules! conv_keycodes {
     ($fnname:ident, $key_from_code:ident, $code_from_key:ident) => {
         pub fn $fnname(code: u32) -> Option<u32> {
-            let key = $key_from_code(code);
+            let key = $key_from_code(code as _);
             match key {
                 Key::Unknown(..) => None,
                 Key::RawKey(..) => None,
@@ -37,7 +37,7 @@ fn macos_iso_code_from_keycode(key: Key) -> Option<u32> {
 
 #[cfg(target_os = "macos")]
 #[allow(non_upper_case_globals)]
-fn macos_keycode_from_code_(code: u32) -> Key {
+fn macos_keycode_from_code_(code: crate::CGKeyCode) -> Key {
     macos_keycode_from_code(map_keycode(code))
 }
 
