@@ -10,11 +10,11 @@ use crate::macos::{key_from_code as macos_keycode_from_code, map_keycode};
 use crate::windows::key_from_scancode as win_key_from_scancode;
 #[cfg(any(target_os = "macos", target_os = "linux"))]
 use crate::windows::scancode_from_key as win_scancode_from_key;
-use crate::Key;
+use crate::{Key, KeyCode};
 
 macro_rules! conv_keycodes {
     ($fnname:ident, $key_from_code:ident, $code_from_key:ident) => {
-        pub fn $fnname(code: u32) -> Option<u32> {
+        pub fn $fnname(code: u32) -> Option<KeyCode> {
             let key = $key_from_code(code as _);
             match key {
                 Key::Unknown(..) => None,
@@ -27,11 +27,11 @@ macro_rules! conv_keycodes {
 
 #[cfg(any(target_os = "windows", target_os = "linux"))]
 #[allow(non_upper_case_globals)]
-fn macos_iso_code_from_keycode(key: Key) -> Option<u32> {
+fn macos_iso_code_from_keycode(key: Key) -> Option<KeyCode> {
     match macos_code_from_keycode(key)? {
-        kVK_ANSI_Grave => Some(kVK_ISO_Section),
         kVK_ISO_Section => Some(kVK_ANSI_Grave),
-        code => Some(code),
+        kVK_ANSI_Grave => Some(kVK_ISO_Section),
+        code => Some(code as _),
     }
 }
 

@@ -2,6 +2,10 @@
 #![allow(non_upper_case_globals)]
 #![allow(dead_code)]
 
+#[cfg(not(target_os = "macos"))]
+pub type CGKeyCode = u32;
+
+#[cfg(target_os = "macos")]
 pub type CGKeyCode = core_graphics::event::CGKeyCode;
 
 pub const kVK_ANSI_A: CGKeyCode = 0;
