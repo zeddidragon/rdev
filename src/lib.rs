@@ -219,7 +219,7 @@
 //! Serde if you install this library with the `serialize` feature.
 mod rdev;
 pub use crate::rdev::{
-    Button, DisplayError, Event, EventType, GrabCallback, GrabError, Key, KeyboardState,
+    Button, DisplayError, Event, EventType, GrabCallback, GrabError, Key, KeyCode, KeyboardState,
     ListenError, RawKey, SimulateError,
 };
 
