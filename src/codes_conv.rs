@@ -19,7 +19,7 @@ macro_rules! conv_keycodes {
             match key {
                 Key::Unknown(..) => None,
                 Key::RawKey(..) => None,
-                _ => $code_from_key(key),
+                _ => $code_from_key(key).map(|c| c as KeyCode),
             }
         }
     };
@@ -37,7 +37,7 @@ fn macos_iso_code_from_keycode(key: Key) -> Option<KeyCode> {
 
 #[cfg(target_os = "macos")]
 #[allow(non_upper_case_globals)]
-fn macos_keycode_from_code_(code: crate::CGKeyCode) -> Key {
+fn macos_keycode_from_code_(code: KeyCode) -> Key {
     macos_keycode_from_code(map_keycode(code))
 }
 
