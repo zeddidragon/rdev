@@ -16,7 +16,7 @@ use std::{
     sync::{mpsc::Sender, Arc, Mutex},
     time::SystemTime,
 };
-use x11::xlib::{self, Display, GrabModeAsync, KeyPressMask, KeyReleaseMask};
+use x11::xlib::{self, Display, GrabModeAsync, KeyPressMask, KeyReleaseMask, Window};
 
 use super::common::KEYBOARD;
 
@@ -35,7 +35,6 @@ static mut GLOBAL_CALLBACK: Option<Box<dyn FnMut(Event) -> Option<Event>>> = Non
 static SOCK_FILE_PATH: &str = "/tmp/rdev_service.sock";
 const GRAB_RECV: Token = Token(0);
 const SERVICE_RECV: Token = Token(1);
-type Window = u64;
 
 pub enum GrabEvent {
     Grab,
@@ -189,11 +188,11 @@ fn get_screen(
     Ok(screen)
 }
 
-fn get_root_window(screen: &*mut xlib::Screen) -> xlib::Window {
+fn get_root_window(screen: &*mut xlib::Screen) -> Window {
     unsafe { xlib::XRootWindowOfScreen(*screen) }
 }
 
-fn listen_to_keyboard_events(display: &*mut xlib::Display, window: &xlib::Window) {
+fn listen_to_keyboard_events(display: &*mut xlib::Display, window: &Window) {
     unsafe {
         xlib::XSelectInput(*display, *window, KeyPressMask | KeyReleaseMask);
     }
