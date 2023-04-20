@@ -106,10 +106,10 @@ fn test_macos_keys() {
 
 #[cfg(windows)]
 fn test_simulate_vk() {
-    rdev::simulate_code(Some(0xA2), None, true);
-    rdev::simulate_code(Some(0x4F), None, true);
-    rdev::simulate_code(Some(0x4F), None, false);
-    rdev::simulate_code(Some(0xA2), None, false);
+    let _ = rdev::simulate_code(Some(0xA2), None, true);
+    let _ = rdev::simulate_code(Some(0x4F), None, true);
+    let _ = rdev::simulate_code(Some(0x4F), None, false);
+    let _ = rdev::simulate_code(Some(0xA2), None, false);
 }
 
 #[cfg(windows)]
@@ -117,6 +117,21 @@ fn test_simulate_char() {
     println!("{:?}", rdev::simulate_char('A', false));
     println!("{:?}", rdev::simulate_char('€', false));
     println!("{:?}", rdev::simulate_char('€', true));
+}
+
+#[cfg(target_os = "linux")]
+fn simulate_combination() {
+    send(&EventType::KeyPress(Key::ControlLeft));
+    rdev::simulate_char('€', true);
+    rdev::simulate_char('€', false);
+    send(&EventType::KeyRelease(Key::ControlLeft));
+}
+
+fn test_simulate_dead() {
+    send(&EventType::KeyPress(Key::AltGr));
+    send(&EventType::KeyPress(Key::KeyE));
+    send(&EventType::KeyRelease(Key::KeyE));
+    send(&EventType::KeyRelease(Key::AltGr));
 }
 
 fn main() {
@@ -131,20 +146,13 @@ fn main() {
     // send(&EventType::KeyPress(Key::LeftBracket));
     // send(&EventType::KeyRelease(Key::LeftBracket));
 
-    // // Combination
-    // send(&EventType::KeyPress(Key::ControlLeft));
-    // rdev::simulate_char('€', true);
-    // rdev::simulate_char('€', false);
-    // // send_char('a', false);
-    // send(&EventType::KeyRelease(Key::ControlLeft));
-    //send(&EventType::KeyPress(Key::AltGr));
-    // send(&EventType::KeyPress(Key::Num3));
+    // #[cfg(target_os = "linux")]
+    // simulate_combination();
 
-    // send(&EventType::KeyRelease(Key::Num3));
-    // send(&EventType::KeyRelease(Key::AltGr));
+    test_simulate_dead();
 
-    #[cfg(windows)]
-    test_simulate_vk();
+    // #[cfg(windows)]
+    // test_simulate_vk();
 
     #[cfg(windows)]
     test_simulate_char();
