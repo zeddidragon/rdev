@@ -251,7 +251,7 @@ pub fn simulate_key_unicode(unicode_16: u16, try_unicode: bool) -> Result<(), Si
         }
         let scan = unsafe { MapVirtualKeyExW(vk as _, MAPVK_VK_TO_VSC, layout) as _ };
         let down_res = simulate_code(Some(vk as _), Some(scan), true);
-        let _ = simulate_code(Some(vk as _), None, false);
+        let _ = simulate_code(Some(vk as _), Some(scan), false);
         for pos in 0..mod_len {
             let rpos = mod_len - 1 - pos;
             if flag & (0x0001 << rpos) != 0 {
