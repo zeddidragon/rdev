@@ -244,15 +244,15 @@ pub fn simulate_code(
     sim_keyboard_event(flags as _, keycode, scancode as _)
 }
 
-pub fn simulate_char(chr: char, try_unicode: bool) -> Result<(), SimulateError> {
+pub fn simulate_key_unicode(unicode_16: u16, try_unicode: bool) -> Result<(), SimulateError> {
     // https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-vkkeyscanexw
     let current_window_thread_id =
         unsafe { GetWindowThreadProcessId(GetForegroundWindow(), std::ptr::null_mut()) };
     let layout = unsafe { GetKeyboardLayout(current_window_thread_id) };
-    let res = unsafe { VkKeyScanExW(chr as _, layout) as u16 };
+    let res = unsafe { VkKeyScanExW(unicode_16, layout) as u16 };
     if res == 0xFFFF {
         if try_unicode {
-            simulate_unicode(chr as u16)
+            simulate_unicode(unicode_16)
         } else {
             Err(SimulateError)
         }
@@ -282,6 +282,11 @@ pub fn simulate_char(chr: char, try_unicode: bool) -> Result<(), SimulateError> 
         }
         down_res
     }
+}
+
+#[inline]
+pub fn simulate_char(chr: char, try_unicode: bool) -> Result<(), SimulateError> {
+    simulate_key_unicode(chr as _, try_unicode)
 }
 
 pub fn simulate_unicode(unicode: u16) -> Result<(), SimulateError> {
