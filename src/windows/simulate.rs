@@ -191,6 +191,11 @@ pub fn simulate(event_type: &EventType) -> Result<(), SimulateError> {
     }
 }
 
+#[inline]
+pub fn vk_to_scan(vk: UINT, layout: Option<HKL>) -> UINT {
+    unsafe { MapVirtualKeyExW(vk as _, MAPVK_VK_TO_VSC, layout.unwrap_or(get_layout())) }
+}
+
 pub fn simulate_code(
     vk: Option<u16>,
     scan: Option<u32>,
