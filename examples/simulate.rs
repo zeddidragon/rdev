@@ -16,18 +16,6 @@ fn send(event_type: &EventType) {
     thread::sleep(delay);
 }
 
-// fn send_char(chr: char, pressed: bool) {
-//     let delay = time::Duration::from_millis(20);
-//     match simulate_char(chr, pressed) {
-//         Ok(()) => (),
-//         Err(SimulateError) => {
-//             println!("We could not send {:?}", chr);
-//         }
-//     }
-//     // Let ths OS catchup (at least MacOS)
-//     thread::sleep(delay);
-// }
-
 #[cfg(target_os = "macos")]
 fn test_macos_keys() {
     let virtual_input = rdev::VirtualInput::new(
@@ -116,6 +104,21 @@ fn test_macos_keys() {
     }
 }
 
+#[cfg(windows)]
+fn test_simulate_vk() {
+    rdev::simulate_code(Some(0xA2), None, true);
+    rdev::simulate_code(Some(0x4F), None, true);
+    rdev::simulate_code(Some(0x4F), None, false);
+    rdev::simulate_code(Some(0xA2), None, false);
+}
+
+#[cfg(windows)]
+fn test_simulate_char() {
+    println!("{:?}", rdev::simulate_char('A', false));
+    println!("{:?}", rdev::simulate_char('€', false));
+    println!("{:?}", rdev::simulate_char('€', true));
+}
+
 fn main() {
     // Windows: LeftBracket
     // scancode 26 => [
@@ -128,7 +131,7 @@ fn main() {
     // send(&EventType::KeyPress(Key::LeftBracket));
     // send(&EventType::KeyRelease(Key::LeftBracket));
 
-    // // Conbination
+    // // Combination
     // send(&EventType::KeyPress(Key::ControlLeft));
     // rdev::simulate_char('€', true);
     // rdev::simulate_char('€', false);
@@ -138,15 +141,13 @@ fn main() {
     // send(&EventType::KeyPress(Key::Num3));
 
     // send(&EventType::KeyRelease(Key::Num3));
-    //send(&EventType::KeyRelease(Key::AltGr));
-    #[cfg(target_os = "windows")]
-    rdev::simulate_code(Some(0xA2), None, true);
-    #[cfg(target_os = "windows")]
-    rdev::simulate_code(Some(0x4F), None, true);
-    #[cfg(target_os = "windows")]
-    rdev::simulate_code(Some(0x4F), None, false);
-    #[cfg(target_os = "windows")]
-    rdev::simulate_code(Some(0xA2), None, false);
+    // send(&EventType::KeyRelease(Key::AltGr));
+
+    #[cfg(windows)]
+    test_simulate_vk();
+
+    #[cfg(windows)]
+    test_simulate_char();
 
     #[cfg(target_os = "macos")]
     test_macos_keys();
