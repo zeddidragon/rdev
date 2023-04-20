@@ -261,8 +261,8 @@ pub use crate::linux::{simulate_char, simulate_unicode, Keyboard};
 #[cfg(target_os = "windows")]
 pub use crate::windows::{
     display_size as _display_size, get_modifier, key_from_scancode, listen as _listen,
-    set_modifier, simulate as _simulate, simulate_char, simulate_code, simulate_unicode,
-    simulate_unistr, vk_to_scancode, Keyboard,
+    set_modifier, simulate as _simulate, simulate_char, simulate_code, simulate_key_unicode,
+    simulate_unicode, simulate_unistr, vk_to_scancode, Keyboard,
 };
 
 /// Listening to global events. Caveat: On MacOS, you require the listen
