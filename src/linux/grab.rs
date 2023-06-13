@@ -2,19 +2,18 @@ use crate::rdev::UnicodeInfo;
 // This code is awful. Good luck
 use crate::{key_from_code, Event, EventType, GrabError, Keyboard, KeyboardState};
 use log::error;
-use mio::unix::SourceFd;
-use mio::{Events, Interest, Poll, Token};
-use std::os::unix::net::UnixDatagram;
-use std::os::unix::prelude::AsRawFd;
-use std::path::Path;
-use std::ptr;
-use std::thread;
-use std::time::Duration;
+use mio::{unix::SourceFd, Events, Interest, Poll, Token};
 use std::{
+    io::{Error, ErrorKind},
     mem::zeroed,
     os::raw::c_int,
-    sync::{mpsc::Sender, Arc, Mutex},
-    time::SystemTime,
+    ptr,
+    sync::{
+        mpsc::{channel, Receiver, Sender},
+        Arc, Mutex,
+    },
+    thread,
+    time::{Duration, SystemTime},
 };
 use x11::xlib::{self, Display, GrabModeAsync, KeyPressMask, KeyReleaseMask, Window};
 
@@ -26,15 +25,14 @@ unsafe impl Sync for MyDisplay {}
 unsafe impl Send for MyDisplay {}
 
 lazy_static::lazy_static! {
-    static ref SENDER: Arc<Mutex<Option<Sender<GrabEvent>>>> = Arc::new(Mutex::new(None));
+    static ref GRAB_KEY_EVENT_SENDER: Arc<Mutex<Option<Sender<GrabEvent>>>> = Arc::new(Mutex::new(None));
+    static ref GRAB_CONTROL_SENDER: Arc<Mutex<Option<Sender<GrabEvent>>>> = Arc::new(Mutex::new(None));
 }
 
 const KEYPRESS_EVENT: i32 = 2;
 
 static mut GLOBAL_CALLBACK: Option<Box<dyn FnMut(Event) -> Option<Event>>> = None;
-static SOCK_FILE_PATH: &str = "/tmp/rdev_service.sock";
 const GRAB_RECV: Token = Token(0);
-const SERVICE_RECV: Token = Token(1);
 
 pub enum GrabEvent {
     Grab,
@@ -111,37 +109,18 @@ fn ungrab_keys(display: *mut Display) {
     }
 }
 
-fn send_to_client(grab: bool) -> std::io::Result<()> {
-    let socket = UnixDatagram::unbound()?;
-    socket.connect(SOCK_FILE_PATH)?;
-    let message = if grab { b"1" } else { b"0" };
-    socket.send(message)?;
-    Ok(())
-}
-
 fn start_grab_service() -> Result<(), GrabError> {
     let (send, recv) = std::sync::mpsc::channel::<GrabEvent>();
-    *SENDER.lock().unwrap() = Some(send);
+    *GRAB_KEY_EVENT_SENDER.lock().unwrap() = Some(send);
 
-    let keyboard = Keyboard::new();
     unsafe {
-        KEYBOARD = keyboard;
+        KEYBOARD = Keyboard::new();
     }
     start_grab_thread()?;
 
     thread::spawn(move || loop {
         if let Ok(data) = recv.recv() {
             match data {
-                GrabEvent::Grab => {
-                    if let Err(e) = send_to_client(true) {
-                        error!("Failed to send grab command, {e}");
-                    }
-                }
-                GrabEvent::UnGrab => {
-                    if let Err(e) = send_to_client(false) {
-                        error!("Failed to send ungrab command, {e}");
-                    }
-                }
                 GrabEvent::KeyEvent(event) => unsafe {
                     if let Some(callback) = &mut GLOBAL_CALLBACK {
                         callback(event);
@@ -150,18 +129,11 @@ fn start_grab_service() -> Result<(), GrabError> {
                 GrabEvent::Exit => {
                     break;
                 }
+                _ => {}
             }
         }
     });
 
-    Ok(())
-}
-
-fn unlink_socket(path: impl AsRef<Path>) -> Result<(), GrabError> {
-    let path = path.as_ref();
-    if Path::new(path).exists() {
-        std::fs::remove_file(path).map_err(GrabError::IoError)?;
-    }
     Ok(())
 }
 
@@ -208,51 +180,6 @@ fn grab_keyboard_events() -> Result<(*mut Display, Window), GrabError> {
     Ok((display, grab_window))
 }
 
-fn get_grab_fd(display: *mut xlib::Display) -> i32 {
-    unsafe { xlib::XConnectionNumber(display) }
-}
-
-fn get_socket() -> Result<UnixDatagram, GrabError> {
-    unlink_socket(SOCK_FILE_PATH)?;
-    let socket = UnixDatagram::bind(SOCK_FILE_PATH).map_err(GrabError::IoError)?;
-    socket.set_nonblocking(true).map_err(GrabError::IoError)?;
-    Ok(socket)
-}
-
-fn create_poll_instance() -> Result<Poll, GrabError> {
-    Poll::new().map_err(GrabError::IoError)
-}
-
-fn poll_register_fd(
-    poll: &Poll,
-    source_fd: i32,
-    token: Token,
-    interests: Interest,
-) -> Result<(), GrabError> {
-    poll.registry()
-        .register(&mut SourceFd(&source_fd), token, interests)
-        .map_err(GrabError::IoError)?;
-    Ok(())
-}
-
-fn change_grab_state(
-    socket: &UnixDatagram,
-    display: *mut xlib::Display,
-    grab_window: Window,
-) -> Result<(), GrabError> {
-    // if recv "1"=> Ascii(49): grab key
-    let mut buf = [0; 1];
-    socket
-        .recv(buf.as_mut_slice())
-        .map_err(GrabError::IoError)?;
-    if buf[0] == 49 {
-        grab_keys(display, grab_window);
-    } else {
-        ungrab_keys(display);
-    }
-    Ok(())
-}
-
 fn read_x_event(x_event: &mut xlib::XEvent, display: *mut xlib::Display) {
     while (unsafe { xlib::XPending(display) }) > 0 {
         unsafe {
@@ -261,70 +188,137 @@ fn read_x_event(x_event: &mut xlib::XEvent, display: *mut xlib::Display) {
         let keycode = unsafe { x_event.key.keycode };
         let is_press = unsafe { x_event.type_ == KEYPRESS_EVENT };
         let event = convert_event(keycode, is_press);
-        if let Some(tx) = &*SENDER.lock().unwrap() {
+        if let Some(tx) = GRAB_KEY_EVENT_SENDER.lock().unwrap().as_ref() {
             tx.send(GrabEvent::KeyEvent(event)).ok();
         }
     }
 }
 
-fn create_event_loop() -> Result<(), GrabError> {
-    let (display, grab_window) = grab_keyboard_events()?;
-    let grab_fd = get_grab_fd(display);
-    let socket = get_socket()?;
-    let socket_fd = socket.as_raw_fd();
-
-    let mut poll = create_poll_instance()?;
-    poll_register_fd(&poll, grab_fd, GRAB_RECV, Interest::READABLE)?;
-    poll_register_fd(&poll, socket_fd, SERVICE_RECV, Interest::READABLE)?;
-
-    let mut events = Events::with_capacity(128);
-    let mut x_event: xlib::XEvent = unsafe { zeroed() };
-
-    loop {
-        poll.poll(&mut events, None).map_err(GrabError::IoError)?;
-        for event in &events {
-            match event.token() {
-                SERVICE_RECV => {
-                    change_grab_state(&socket, display, grab_window)?;
+fn start_grab_control_thread(
+    display: u64,
+    grab_window: u64,
+    exit_clone: Arc<Mutex<bool>>,
+    rx: Receiver<GrabEvent>,
+) {
+    std::thread::spawn(move || {
+        let display = display as *mut xlib::Display;
+        loop {
+            match rx.recv() {
+                Ok(evt) => match evt {
+                    GrabEvent::Exit => {
+                        *exit_clone.lock().unwrap() = true;
+                        break;
+                    }
+                    GrabEvent::Grab => {
+                        grab_keys(display, grab_window);
+                    }
+                    GrabEvent::UnGrab => {
+                        ungrab_keys(display);
+                    }
+                    _ => {}
+                },
+                Err(e) => {
+                    // unreachable
+                    log::error!("Failed to receive event, {}", e);
+                    break;
                 }
-                GRAB_RECV => {
-                    read_x_event(&mut x_event, display);
-                }
-                _ => {}
             }
         }
-    }
+    });
+}
+
+fn start_poll_x_event(display: u64, exit: Arc<Mutex<bool>>, mut poll: Poll) {
+    thread::spawn(move || {
+        let display = display as *mut xlib::Display;
+        let mut x_event: xlib::XEvent = unsafe { zeroed() };
+        let mut events = Events::with_capacity(128);
+        loop {
+            if *exit.lock().unwrap() {
+                break;
+            }
+
+            match poll.poll(&mut events, Some(Duration::from_millis(300))) {
+                Ok(_) => {
+                    for event in &events {
+                        match event.token() {
+                            GRAB_RECV => {
+                                read_x_event(&mut x_event, display);
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+                Err(e) => {
+                    // to-do: Are there any errors that need to be passed?
+                    log::error!("Failed to poll event, {}", e);
+                    break;
+                }
+            }
+        }
+    });
+}
+
+fn create_event_loop() -> Result<(), GrabError> {
+    let (display, grab_window) = grab_keyboard_events()?;
+    let grab_fd = unsafe { xlib::XConnectionNumber(display) };
+
+    let poll = Poll::new().map_err(GrabError::IoError)?;
+    poll.registry()
+        .register(&mut SourceFd(&grab_fd), GRAB_RECV, Interest::READABLE)
+        .map_err(GrabError::IoError)?;
+
+    let (tx, rx) = channel();
+    GRAB_CONTROL_SENDER.lock().unwrap().replace(tx);
+
+    let exit = Arc::new(Mutex::new(false));
+    start_grab_control_thread(display as u64, grab_window as u64, exit.clone(), rx);
+    start_poll_x_event(display as u64, exit, poll);
+    Ok(())
 }
 
 fn start_grab_thread() -> Result<(), GrabError> {
-    let (error_sender, error_recv) = std::sync::mpsc::channel::<GrabError>();
+    let (tx, rx) = std::sync::mpsc::channel::<Option<GrabError>>();
+    let _tx_holder = tx.clone();
 
-    thread::spawn(move || {
-        if let Err(err) = create_event_loop() {
-            error_sender.send(err).ok();
-        }
+    thread::spawn(move || match create_event_loop() {
+        Err(err) => tx.send(Some(err)).ok(),
+        Ok(_) => tx.send(None).ok(),
     });
-    thread::sleep(Duration::from_millis(100));
-    if let Ok(err) = error_recv.try_recv() {
-        Err(err)
-    } else {
-        Ok(())
+    match rx.recv_timeout(Duration::from_millis(1000)) {
+        Ok(Some(err)) => Err(err),
+        Ok(None) => Ok(()),
+        Err(_) => {
+            // Wait too long
+            Err(GrabError::IoError(Error::new(
+                ErrorKind::TimedOut,
+                "Wait more than 1000 milliseconds",
+            )))
+        }
     }
 }
 
+fn send_grab_control(data: GrabEvent) {
+    match GRAB_CONTROL_SENDER.lock().unwrap().as_ref() {
+        Some(sender) => {
+            if let Err(e) = sender.send(data) {
+                error!("Failed to send grab command, {e}");
+            }
+        }
+        None => {
+            error!("Failed to send grab command, no sender");
+        }
+    }
+    thread::sleep(Duration::from_millis(50));
+}
+
+#[inline]
 pub fn enable_grab() {
-    if let Some(tx) = &*SENDER.lock().unwrap() {
-        tx.send(GrabEvent::Grab).ok();
-        /* if too fast: poll cannot perceive events */
-        thread::sleep(Duration::from_millis(50));
-    }
+    send_grab_control(GrabEvent::Grab);
 }
 
+#[inline]
 pub fn disable_grab() {
-    if let Some(tx) = &*SENDER.lock().unwrap() {
-        tx.send(GrabEvent::UnGrab).ok();
-        thread::sleep(Duration::from_millis(50));
-    }
+    send_grab_control(GrabEvent::UnGrab);
 }
 
 pub fn start_grab_listen<T>(callback: T) -> Result<(), GrabError>
@@ -340,7 +334,8 @@ where
 }
 
 pub fn exit_grab_listen() {
-    if let Some(tx) = &*SENDER.lock().unwrap() {
+    if let Some(tx) = GRAB_KEY_EVENT_SENDER.lock().unwrap().as_ref() {
         tx.send(GrabEvent::Exit).ok();
     }
+    send_grab_control(GrabEvent::Exit);
 }
