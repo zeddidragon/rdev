@@ -26,7 +26,7 @@ unsafe impl Send for MyDisplay {}
 
 lazy_static::lazy_static! {
     static ref GRAB_KEY_EVENT_SENDER: Arc<Mutex<Option<Sender<GrabEvent>>>> = Arc::new(Mutex::new(None));
-    static ref GRAB_CONTROL_SENDER: Arc<Mutex<Option<Sender<GrabEvent>>>> = Arc::new(Mutex::new(None));
+    static ref GRAB_CONTROL_SENDER: Arc<Mutex<Option<Sender<GrabControl>>>> = Arc::new(Mutex::new(None));
 }
 
 const KEYPRESS_EVENT: i32 = 2;
@@ -34,11 +34,15 @@ const KEYPRESS_EVENT: i32 = 2;
 static mut GLOBAL_CALLBACK: Option<Box<dyn FnMut(Event) -> Option<Event>>> = None;
 const GRAB_RECV: Token = Token(0);
 
-pub enum GrabEvent {
+enum GrabEvent {
+    Exit,
+    KeyEvent(Event),
+}
+
+enum GrabControl {
     Grab,
     UnGrab,
     Exit,
-    KeyEvent(Event),
 }
 
 #[inline]
@@ -198,21 +202,21 @@ fn start_grab_control_thread(
     display: u64,
     grab_window: u64,
     exit_clone: Arc<Mutex<bool>>,
-    rx: Receiver<GrabEvent>,
+    rx: Receiver<GrabControl>,
 ) {
     std::thread::spawn(move || {
         let display = display as *mut xlib::Display;
         loop {
             match rx.recv() {
                 Ok(evt) => match evt {
-                    GrabEvent::Exit => {
+                    GrabControl::Exit => {
                         *exit_clone.lock().unwrap() = true;
                         break;
                     }
-                    GrabEvent::Grab => {
+                    GrabControl::Grab => {
                         grab_keys(display, grab_window);
                     }
-                    GrabEvent::UnGrab => {
+                    GrabControl::UnGrab => {
                         ungrab_keys(display);
                     }
                     _ => {}
@@ -297,7 +301,7 @@ fn start_grab_thread() -> Result<(), GrabError> {
     }
 }
 
-fn send_grab_control(data: GrabEvent) {
+fn send_grab_control(data: GrabControl) {
     match GRAB_CONTROL_SENDER.lock().unwrap().as_ref() {
         Some(sender) => {
             if let Err(e) = sender.send(data) {
@@ -313,12 +317,12 @@ fn send_grab_control(data: GrabEvent) {
 
 #[inline]
 pub fn enable_grab() {
-    send_grab_control(GrabEvent::Grab);
+    send_grab_control(GrabControl::Grab);
 }
 
 #[inline]
 pub fn disable_grab() {
-    send_grab_control(GrabEvent::UnGrab);
+    send_grab_control(GrabControl::UnGrab);
 }
 
 pub fn start_grab_listen<T>(callback: T) -> Result<(), GrabError>
@@ -337,5 +341,5 @@ pub fn exit_grab_listen() {
     if let Some(tx) = GRAB_KEY_EVENT_SENDER.lock().unwrap().as_ref() {
         tx.send(GrabEvent::Exit).ok();
     }
-    send_grab_control(GrabEvent::Exit);
+    send_grab_control(GrabControl::Exit);
 }
