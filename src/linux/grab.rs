@@ -133,7 +133,6 @@ fn start_grab_service() -> Result<(), GrabError> {
                 GrabEvent::Exit => {
                     break;
                 }
-                _ => {}
             }
         }
     });
@@ -200,7 +199,7 @@ fn read_x_event(x_event: &mut xlib::XEvent, display: *mut xlib::Display) {
 
 fn start_grab_control_thread(
     display: u64,
-    grab_window: u64,
+    grab_window: Window,
     exit_clone: Arc<Mutex<bool>>,
     rx: Receiver<GrabControl>,
 ) {
@@ -219,7 +218,6 @@ fn start_grab_control_thread(
                     GrabControl::UnGrab => {
                         ungrab_keys(display);
                     }
-                    _ => {}
                 },
                 Err(e) => {
                     // unreachable
@@ -275,7 +273,7 @@ fn create_event_loop() -> Result<(), GrabError> {
     GRAB_CONTROL_SENDER.lock().unwrap().replace(tx);
 
     let exit = Arc::new(Mutex::new(false));
-    start_grab_control_thread(display as u64, grab_window as u64, exit.clone(), rx);
+    start_grab_control_thread(display as u64, grab_window, exit.clone(), rx);
     start_poll_x_event(display as u64, exit, poll);
     Ok(())
 }
