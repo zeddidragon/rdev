@@ -216,19 +216,18 @@ impl Keyboard {
 
         let len = buf.iter().position(|ch| ch == &0).unwrap_or(BUF_LEN);
 
-        // to-do: try remove unwrap() here
         // C0 controls
-        if len == 1
-            && matches!(
-                String::from_utf8(buf[..len].to_vec())
-                    .unwrap()
-                    .chars()
-                    .next()
-                    .unwrap(),
-                '\u{1}'..='\u{1f}'
-            )
-        {
-            return None;
+        if len == 1 {
+            match String::from_utf8(buf[..len].to_vec()) {
+                Ok(s) => {
+                    if let Some(c) = s.chars().next() {
+                        if ('\u{1}'..='\u{1f}').contains(&c) {
+                            return None;
+                        }
+                    }
+                }
+                Err(_) => {}
+            }
         }
 
         Some(UnicodeInfo {

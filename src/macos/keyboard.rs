@@ -228,19 +228,19 @@ impl Keyboard {
         if length == 0 {
             return None;
         }
-        // to-do: try remove unwrap() here
+
         // C0 controls
-        if length == 1
-            && matches!(
-                String::from_utf16(&buff[..length].to_vec())
-                    .unwrap()
-                    .chars()
-                    .next()
-                    .unwrap(),
-                '\u{1}'..='\u{1f}'
-            )
-        {
-            return None;
+        if length == 1 {
+            match String::from_utf8(buf[..length].to_vec()) {
+                Ok(s) => {
+                    if let Some(c) = s.chars().next() {
+                        if ('\u{1}'..='\u{1f}').contains(&c) {
+                            return None;
+                        }
+                    }
+                }
+                Err(_) => {}
+            }
         }
 
         let unicode = buff[..length].to_vec();

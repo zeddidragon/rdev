@@ -53,9 +53,8 @@ pub enum CGEventTapOption {
 }
 
 pub static mut LAST_FLAGS: CGEventFlags = CGEventFlags::CGEventFlagNull;
-// to-do: try remove unwrap() here
 lazy_static! {
-    pub static ref KEYBOARD_STATE: Mutex<Keyboard> = Mutex::new(Keyboard::new().unwrap());
+    pub static ref KEYBOARD_STATE: Mutex<Option<Keyboard>> = Mutex::new(Keyboard::new());
 }
 
 // https://developer.apple.com/documentation/coregraphics/cgeventmask?language=objc
@@ -143,7 +142,9 @@ pub fn map_keycode(code: CGKeyCode) -> CGKeyCode {
 }
 
 pub fn set_is_main_thread(b: bool) {
-    KEYBOARD_STATE.lock().unwrap().set_is_main_thread(b);
+    if let Some(keyboard_state) = KEYBOARD_STATE.lock().unwrap() {
+        keyboard_state.set_is_main_thread(b);
+    }
 }
 
 #[inline]

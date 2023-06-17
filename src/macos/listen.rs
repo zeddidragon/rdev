@@ -17,7 +17,7 @@ unsafe extern "C" fn raw_callback(
     // println!("Event ref {:?}", cg_event_ptr);
     // let cg_event: CGEvent = transmute_copy::<*mut c_void, CGEvent>(&cg_event_ptr);
     let opt = KEYBOARD_STATE.lock();
-    if let Ok(mut keyboard) = opt {
+    if let Ok(Some(mut keyboard)) = opt {
         if let Some(event) = convert(_type, &cg_event, &mut keyboard) {
             if let Some(callback) = &mut GLOBAL_CALLBACK {
                 callback(event);
