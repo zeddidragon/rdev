@@ -86,7 +86,7 @@ impl KeyboardGrabber {
         Ok(grabber)
     }
 
-    fn start(&self, exit: Arc<Mutex<bool>>) -> Result<(), GrabError> {
+    fn start(&self) -> Result<(), GrabError> {
         let poll = Poll::new().map_err(GrabError::IoError)?;
         poll.registry()
             .register(&mut SourceFd(&self.grab_fd), GRAB_RECV, Interest::READABLE)
@@ -95,8 +95,8 @@ impl KeyboardGrabber {
         let (tx, rx) = channel();
         GRAB_CONTROL_SENDER.lock().unwrap().replace(tx);
 
-        start_grab_control_thread(self.display as u64, self.window, exit.clone(), rx);
-        loop_poll_x_event(self.display, exit, poll);
+        start_grab_control_thread(self.display as u64, self.window, rx);
+        loop_poll_x_event(self.display, poll);
         Ok(())
     }
 }
@@ -230,19 +230,16 @@ fn read_x_event(x_event: &mut xlib::XEvent, display: *mut xlib::Display) {
     }
 }
 
-fn start_grab_control_thread(
-    display: u64,
-    grab_window: Window,
-    exit_clone: Arc<Mutex<bool>>,
-    rx: Receiver<GrabControl>,
-) {
+fn start_grab_control_thread(display: u64, grab_window: Window, rx: Receiver<GrabControl>) {
     std::thread::spawn(move || {
         let display = display as *mut xlib::Display;
         loop {
             match rx.recv() {
                 Ok(evt) => match evt {
                     GrabControl::Exit => {
-                        *exit_clone.lock().unwrap() = true;
+                        unsafe {
+                            EXIT_GRAB = true;
+                        }
                         break;
                     }
                     GrabControl::Grab => {
@@ -262,11 +259,11 @@ fn start_grab_control_thread(
     });
 }
 
-fn loop_poll_x_event(display: *mut xlib::Display, exit: Arc<Mutex<bool>>, mut poll: Poll) {
+fn loop_poll_x_event(display: *mut xlib::Display, mut poll: Poll) {
     let mut x_event: xlib::XEvent = unsafe { zeroed() };
     let mut events = Events::with_capacity(128);
     loop {
-        if *exit.lock().unwrap() {
+        if unsafe { EXIT_GRAB } {
             break;
         }
 
@@ -290,9 +287,9 @@ fn loop_poll_x_event(display: *mut xlib::Display, exit: Arc<Mutex<bool>>, mut po
 }
 
 #[inline]
-fn start_grab(exit: Arc<Mutex<bool>>) -> Result<(), GrabError> {
+fn start_grab() -> Result<(), GrabError> {
     let grabber = KeyboardGrabber::create()?;
-    grabber.start(exit)
+    grabber.start()
 }
 
 fn start_grab_thread() {
@@ -302,8 +299,7 @@ fn start_grab_thread() {
             if unsafe { EXIT_GRAB } {
                 break;
             }
-            let exit = Arc::new(Mutex::new(false));
-            if let Err(err) = start_grab(exit.clone()) {
+            if let Err(err) = start_grab() {
                 log::debug!("Failed to start grab keyboard, {:?}", err);
                 if c <= 3 {
                     c += 1;
@@ -316,9 +312,6 @@ fn start_grab_thread() {
                 }
             } else {
                 c = 0;
-            }
-            if exit.lock().unwrap().clone() {
-                break;
             }
         }
     });
