@@ -50,10 +50,10 @@ impl Keyboard {
                 return None;
             }
 
-            let string = CString::new("").expect("Can't creat CString");
+            let string = CString::new("").ok()?;
             libc::setlocale(libc::LC_ALL, string.as_ptr());
             // https://stackoverflow.com/questions/18246848/get-utf-8-input-with-x11-display#
-            let string = CString::new("@im=none").expect("Can't creat CString");
+            let string = CString::new("@im=none").ok()?;
             let ret = xlib::XSetLocaleModifiers(string.as_ptr());
             NonNull::new(ret)?;
 
@@ -93,8 +93,8 @@ impl Keyboard {
                 &mut win_attr,
             );
 
-            let input_style = CString::new(xlib::XNInputStyle).expect("CString::new failed");
-            let window_client = CString::new(xlib::XNClientWindow).expect("CString::new failed");
+            let input_style = CString::new(xlib::XNInputStyle).ok()?;
+            let window_client = CString::new(xlib::XNClientWindow).ok()?;
             let style = xlib::XIMPreeditNothing | xlib::XIMStatusNothing;
 
             let xic = xlib::XCreateIC(

@@ -4,7 +4,6 @@ use crate::{key_from_code, Event, EventType, GrabError, Keyboard, KeyboardState}
 use log::error;
 use mio::{unix::SourceFd, Events, Interest, Poll, Token};
 use std::{
-    io::{Error, ErrorKind},
     mem::zeroed,
     os::raw::c_int,
     ptr,
@@ -19,21 +18,6 @@ use x11::xlib::{self, Display, GrabModeAsync, KeyPressMask, KeyReleaseMask, Wind
 
 use super::common::KEYBOARD;
 
-#[derive(Debug)]
-pub struct MyDisplay(*mut xlib::Display);
-unsafe impl Sync for MyDisplay {}
-unsafe impl Send for MyDisplay {}
-
-lazy_static::lazy_static! {
-    static ref GRAB_KEY_EVENT_SENDER: Arc<Mutex<Option<Sender<GrabEvent>>>> = Arc::new(Mutex::new(None));
-    static ref GRAB_CONTROL_SENDER: Arc<Mutex<Option<Sender<GrabControl>>>> = Arc::new(Mutex::new(None));
-}
-
-const KEYPRESS_EVENT: i32 = 2;
-
-static mut GLOBAL_CALLBACK: Option<Box<dyn FnMut(Event) -> Option<Event>>> = None;
-const GRAB_RECV: Token = Token(0);
-
 enum GrabEvent {
     Exit,
     KeyEvent(Event),
@@ -43,6 +27,87 @@ enum GrabControl {
     Grab,
     UnGrab,
     Exit,
+}
+
+struct KeyboardGrabber {
+    display: *mut xlib::Display,
+    screen: *mut xlib::Screen,
+    window: Window,
+    grab_fd: c_int,
+}
+
+unsafe impl Send for KeyboardGrabber {}
+unsafe impl Sync for KeyboardGrabber {}
+
+lazy_static::lazy_static! {
+    static ref GRAB_KEY_EVENT_SENDER: Arc<Mutex<Option<Sender<GrabEvent>>>> = Arc::new(Mutex::new(None));
+    static ref GRAB_CONTROL_SENDER: Arc<Mutex<Option<Sender<GrabControl>>>> = Arc::new(Mutex::new(None));
+}
+
+const KEYPRESS_EVENT: i32 = 2;
+
+static mut EXIT_GRAB: bool = false;
+static mut GLOBAL_CALLBACK: Option<Box<dyn FnMut(Event) -> Option<Event>>> = None;
+const GRAB_RECV: Token = Token(0);
+
+impl KeyboardGrabber {
+    fn create() -> Result<Self, GrabError> {
+        let mut grabber = Self {
+            display: ptr::null_mut(),
+            screen: ptr::null_mut(),
+            window: 0,
+            grab_fd: 0,
+        };
+        grabber.display = unsafe { xlib::XOpenDisplay(ptr::null()) };
+        if grabber.display.is_null() {
+            return Err(GrabError::MissingDisplayError);
+        }
+
+        let screen_number = unsafe { xlib::XDefaultScreen(grabber.display) };
+        grabber.screen = unsafe { xlib::XScreenOfDisplay(grabber.display, screen_number) };
+        if grabber.screen.is_null() {
+            return Err(GrabError::MissScreenError);
+        }
+
+        grabber.window = unsafe { xlib::XRootWindowOfScreen(grabber.screen) };
+        unsafe {
+            // to-do: check the result.
+            // No documentation on the return value of this function
+            // https://tronche.com/gui/x/xlib/event-handling/XSelectInput.html
+            xlib::XSelectInput(
+                grabber.display,
+                grabber.window,
+                KeyPressMask | KeyReleaseMask,
+            );
+        }
+
+        grabber.grab_fd = unsafe { xlib::XConnectionNumber(grabber.display) };
+
+        Ok(grabber)
+    }
+
+    fn start(&self, exit: Arc<Mutex<bool>>) -> Result<(), GrabError> {
+        let poll = Poll::new().map_err(GrabError::IoError)?;
+        poll.registry()
+            .register(&mut SourceFd(&self.grab_fd), GRAB_RECV, Interest::READABLE)
+            .map_err(GrabError::IoError)?;
+
+        let (tx, rx) = channel();
+        GRAB_CONTROL_SENDER.lock().unwrap().replace(tx);
+
+        start_grab_control_thread(self.display as u64, self.window, exit.clone(), rx);
+        loop_poll_x_event(self.display, exit, poll);
+        Ok(())
+    }
+}
+
+impl Drop for KeyboardGrabber {
+    fn drop(&mut self) {
+        if !self.display.is_null() {
+            ungrab_keys(self.display);
+            let _ignore = unsafe { xlib::XCloseDisplay(self.display) };
+        }
+    }
 }
 
 #[inline]
@@ -113,15 +178,7 @@ fn ungrab_keys(display: *mut Display) {
     }
 }
 
-fn start_grab_service() -> Result<(), GrabError> {
-    let (send, recv) = std::sync::mpsc::channel::<GrabEvent>();
-    *GRAB_KEY_EVENT_SENDER.lock().unwrap() = Some(send);
-
-    unsafe {
-        KEYBOARD = Keyboard::new();
-    }
-    start_grab_thread()?;
-
+fn start_callback_event_thread(recv: Receiver<GrabEvent>) {
     thread::spawn(move || loop {
         if let Ok(data) = recv.recv() {
             match data {
@@ -136,56 +193,32 @@ fn start_grab_service() -> Result<(), GrabError> {
             }
         }
     });
-
-    Ok(())
 }
 
-fn open_display() -> Result<*mut Display, GrabError> {
-    let display = unsafe { xlib::XOpenDisplay(ptr::null()) };
-    if display.is_null() {
-        return Err(GrabError::MissingDisplayError);
-    }
-    Ok(display)
-}
+fn start_grab_service() -> Result<(), GrabError> {
+    let (tx, rx) = channel::<GrabEvent>();
+    *GRAB_KEY_EVENT_SENDER.lock().unwrap() = Some(tx);
 
-fn get_default_screen_number(display: &*mut xlib::Display) -> i32 {
-    unsafe { xlib::XDefaultScreen(*display) }
-}
-
-fn get_screen(
-    display: &*mut xlib::Display,
-    screen_number: i32,
-) -> Result<*mut xlib::Screen, GrabError> {
-    let screen = unsafe { xlib::XScreenOfDisplay(*display, screen_number) };
-    if screen.is_null() {
-        return Err(GrabError::MissScreenError);
-    }
-    Ok(screen)
-}
-
-fn get_root_window(screen: &*mut xlib::Screen) -> Window {
-    unsafe { xlib::XRootWindowOfScreen(*screen) }
-}
-
-fn listen_to_keyboard_events(display: &*mut xlib::Display, window: &Window) {
     unsafe {
-        xlib::XSelectInput(*display, *window, KeyPressMask | KeyReleaseMask);
+        // to-do: is display pointer in keyboard always valid?
+        // KEYBOARD usage is very confusing and error prone.
+        KEYBOARD = Keyboard::new();
+        if KEYBOARD.is_none() {
+            return Err(GrabError::KeyboardError);
+        }
     }
-}
 
-fn grab_keyboard_events() -> Result<(*mut Display, Window), GrabError> {
-    let display = open_display()?;
-    let screen_number = get_default_screen_number(&display);
-    let screen = get_screen(&display, screen_number)?;
-    let grab_window = get_root_window(&screen);
-    listen_to_keyboard_events(&display, &grab_window);
-
-    Ok((display, grab_window))
+    start_grab_thread();
+    start_callback_event_thread(rx);
+    Ok(())
 }
 
 fn read_x_event(x_event: &mut xlib::XEvent, display: *mut xlib::Display) {
     while (unsafe { xlib::XPending(display) }) > 0 {
         unsafe {
+            // to-do: check the result.
+            // No documentation on the return value of this function
+            // https://linux.die.net/man/3/xnextevent
             xlib::XNextEvent(display, x_event);
         }
         let keycode = unsafe { x_event.key.keycode };
@@ -229,74 +262,66 @@ fn start_grab_control_thread(
     });
 }
 
-fn start_poll_x_event(display: u64, exit: Arc<Mutex<bool>>, mut poll: Poll) {
-    thread::spawn(move || {
-        let display = display as *mut xlib::Display;
-        let mut x_event: xlib::XEvent = unsafe { zeroed() };
-        let mut events = Events::with_capacity(128);
-        loop {
-            if *exit.lock().unwrap() {
-                break;
-            }
+fn loop_poll_x_event(display: *mut xlib::Display, exit: Arc<Mutex<bool>>, mut poll: Poll) {
+    let mut x_event: xlib::XEvent = unsafe { zeroed() };
+    let mut events = Events::with_capacity(128);
+    loop {
+        if *exit.lock().unwrap() {
+            break;
+        }
 
-            match poll.poll(&mut events, Some(Duration::from_millis(300))) {
-                Ok(_) => {
-                    for event in &events {
-                        match event.token() {
-                            GRAB_RECV => {
-                                read_x_event(&mut x_event, display);
-                            }
-                            _ => {}
+        match poll.poll(&mut events, Some(Duration::from_millis(300))) {
+            Ok(_) => {
+                for event in &events {
+                    match event.token() {
+                        GRAB_RECV => {
+                            read_x_event(&mut x_event, display);
                         }
+                        _ => {}
                     }
                 }
-                Err(e) => {
-                    // to-do: Are there any errors that need to be passed?
-                    log::error!("Failed to poll event, {}", e);
-                    break;
+            }
+            Err(e) => {
+                log::error!("Failed to poll event, {}", e);
+                break;
+            }
+        }
+    }
+}
+
+#[inline]
+fn start_grab(exit: Arc<Mutex<bool>>) -> Result<(), GrabError> {
+    let grabber = KeyboardGrabber::create()?;
+    grabber.start(exit)
+}
+
+fn start_grab_thread() {
+    thread::spawn(|| {
+        let mut c = 0;
+        loop {
+            if unsafe { EXIT_GRAB } {
+                break;
+            }
+            let exit = Arc::new(Mutex::new(false));
+            if let Err(err) = start_grab(exit.clone()) {
+                log::debug!("Failed to start grab keyboard, {:?}", err);
+                if c <= 3 {
+                    c += 1;
+                    thread::sleep(Duration::from_millis(100));
                 }
+                if c > 3 && c < 10 {
+                    thread::sleep(Duration::from_millis(c * 100));
+                } else {
+                    thread::sleep(Duration::from_millis(1000));
+                }
+            } else {
+                c = 0;
+            }
+            if exit.lock().unwrap().clone() {
+                break;
             }
         }
     });
-}
-
-fn create_event_loop() -> Result<(), GrabError> {
-    let (display, grab_window) = grab_keyboard_events()?;
-    let grab_fd = unsafe { xlib::XConnectionNumber(display) };
-
-    let poll = Poll::new().map_err(GrabError::IoError)?;
-    poll.registry()
-        .register(&mut SourceFd(&grab_fd), GRAB_RECV, Interest::READABLE)
-        .map_err(GrabError::IoError)?;
-
-    let (tx, rx) = channel();
-    GRAB_CONTROL_SENDER.lock().unwrap().replace(tx);
-
-    let exit = Arc::new(Mutex::new(false));
-    start_grab_control_thread(display as u64, grab_window, exit.clone(), rx);
-    start_poll_x_event(display as u64, exit, poll);
-    Ok(())
-}
-
-fn start_grab_thread() -> Result<(), GrabError> {
-    let (tx, rx) = std::sync::mpsc::channel::<Option<GrabError>>();
-    let _tx_holder = tx.clone();
-
-    thread::spawn(move || match create_event_loop() {
-        Err(err) => tx.send(Some(err)).ok(),
-        Ok(_) => tx.send(None).ok(),
-    });
-    match rx.recv_timeout(Duration::from_millis(1000)) {
-        Ok(Some(err)) => Err(err),
-        Ok(None) => Ok(()),
-        Err(_) => {
-            // Wait too long
-            Err(GrabError::IoError(Error::new(
-                ErrorKind::TimedOut,
-                "Wait more than 1000 milliseconds",
-            )))
-        }
-    }
 }
 
 fn send_grab_control(data: GrabControl) {
@@ -336,6 +361,9 @@ where
 }
 
 pub fn exit_grab_listen() {
+    unsafe {
+        EXIT_GRAB = true;
+    }
     if let Some(tx) = GRAB_KEY_EVENT_SENDER.lock().unwrap().as_ref() {
         tx.send(GrabEvent::Exit).ok();
     }
