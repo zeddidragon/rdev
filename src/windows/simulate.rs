@@ -18,6 +18,7 @@ use winapi::um::winuser::{
     WHEEL_DELTA,
 };
 /// Not defined in win32 but define here for clarity
+#[allow(dead_code)]
 static KEYEVENTF_KEYDOWN: DWORD = 0;
 // KEYBDINPUT
 static mut DW_MOUSE_EXTRA_INFO: usize = 0;
@@ -237,11 +238,10 @@ pub fn simulate_key_unicode(unicode_16: u16, try_unicode: bool) -> Result<(), Si
     } else {
         let vk = res & 0x00FF;
         let flag = res >> 8;
-        // unwrap is ok here, because we already checked that the keys are valid
         let modifiers_scancode = [
-            scancode_from_key(Key::ShiftLeft).unwrap(),
-            scancode_from_key(Key::ControlLeft).unwrap(),
-            scancode_from_key(Key::Alt).unwrap(),
+            scancode_from_key(Key::ShiftLeft).unwrap_or(0x2A),
+            scancode_from_key(Key::ControlLeft).unwrap_or(0x1D),
+            scancode_from_key(Key::Alt).unwrap_or(0x38),
         ];
         let mod_len = modifiers_scancode.len();
         for pos in 0..mod_len {

@@ -29,15 +29,15 @@ pub struct Keyboard {
 }
 
 impl Keyboard {
-    pub fn new() -> Option<Keyboard> {
-        Some(Keyboard {
+    pub fn new() -> Keyboard {
+        Keyboard {
             last_code: 0,
             last_scan_code: 0,
             last_state: [0; 256],
             modifiers: HashMap::new(),
             last_is_dead: false,
             event_popup: true,
-        })
+        }
     }
 
     pub(crate) fn get_modifier(&self, key: Key) -> bool {

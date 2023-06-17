@@ -23,9 +23,8 @@ pub const TRUE: i32 = 1;
 pub const FALSE: i32 = 0;
 
 pub static mut HOOK: HHOOK = null_mut();
-// to-do: try remove unwrap() here
 lazy_static! {
-    pub(crate) static ref KEYBOARD: Mutex<Keyboard> = Mutex::new(Keyboard::new().unwrap());
+    pub(crate) static ref KEYBOARD: Mutex<Keyboard> = Mutex::new(Keyboard::new());
 }
 
 pub fn set_modifier(key: Key, down: bool) {
