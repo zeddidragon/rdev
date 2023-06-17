@@ -142,7 +142,7 @@ pub fn map_keycode(code: CGKeyCode) -> CGKeyCode {
 }
 
 pub fn set_is_main_thread(b: bool) {
-    if let Some(keyboard_state) = KEYBOARD_STATE.lock().unwrap() {
+    if let Some(keyboard_state) = KEYBOARD_STATE.lock().unwrap().as_mut() {
         keyboard_state.set_is_main_thread(b);
     }
 }
