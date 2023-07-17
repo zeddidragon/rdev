@@ -153,10 +153,10 @@ decl_keycodes!(
     RightArrow, kVK_RightArrow,
     DownArrow, kVK_DownArrow,
     UpArrow, kVK_UpArrow,
-    Apps, kVK_Context_Menu
+    Apps, kVK_Context_Menu,
     // KanaMode, kVK_Unknown,
-    // Convert, kVK_Unknown,
-    // NonConvert, kVK_Unknown,
+    NonConvert, kVK_JIS_Eisu,
+    Convert, kVK_JIS_Kana
     // Lang3, kVK_Unknown,
     // Lang4, kVK_Unknown,
     // Lang5, kVK_Unknown
