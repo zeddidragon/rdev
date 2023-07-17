@@ -153,13 +153,11 @@ decl_keycodes!(
     VolumeUp, 0x007B,
     VolumeDown, 0x007A,
     VolumeMute, 0x0079,
-    Lang1, 0x0082,
-    Lang2, 0x0083,
+    Lang1, 0x0066,
+    Lang2, 0x0064,
     Lang3, 0x0062,
     Lang4, 0x0063,
-    Lang5, 0x005d,
-    Convert, 0x0064,
-    NonConvert, 0x0066
+    Lang5, 0x005d
 );
 
 #[cfg(test)]

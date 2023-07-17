@@ -252,8 +252,6 @@ pub enum Key {
     Final,
     Hanja,
     Hanji,
-    Convert,    // Japanese Henkan (Convert) key.
-    NonConvert, // Japanese Muhenkan (No-convert) key.
     Print,
     Select,
     Execute,
