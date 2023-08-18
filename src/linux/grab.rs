@@ -14,7 +14,7 @@ use std::{
     thread,
     time::{Duration, SystemTime},
 };
-use x11::xlib::{self, Display, GrabModeAsync, KeyPressMask, KeyReleaseMask, Window};
+use x11::xlib::{self, GrabModeAsync, KeyPressMask, KeyReleaseMask, Window};
 
 use super::common::KEYBOARD;
 
@@ -95,8 +95,9 @@ impl KeyboardGrabber {
         let (tx, rx) = channel();
         GRAB_CONTROL_SENDER.lock().unwrap().replace(tx);
 
-        start_grab_control_thread(self.display as u64, self.window, rx);
-        loop_poll_x_event(self.display, poll);
+        let display_lock = Arc::new(Mutex::new(self.display as u64));
+        start_grab_control_thread(display_lock.clone(), self.window, rx);
+        loop_poll_x_event(display_lock, poll);
         Ok(())
     }
 }
@@ -104,7 +105,7 @@ impl KeyboardGrabber {
 impl Drop for KeyboardGrabber {
     fn drop(&mut self) {
         if !self.display.is_null() {
-            ungrab_keys(self.display);
+            ungrab_keys_(self.display);
             let _ignore = unsafe { xlib::XCloseDisplay(self.display) };
         }
     }
@@ -155,8 +156,10 @@ fn convert_event(code: u32, is_press: bool) -> Event {
     }
 }
 
-fn grab_keys(display: *mut Display, grab_window: libc::c_ulong) {
+fn grab_keys(display: Arc<Mutex<u64>>, grab_window: libc::c_ulong) {
     unsafe {
+        let lock = display.lock().unwrap();
+        let display = *lock as *mut xlib::Display;
         xlib::XGrabKeyboard(
             display,
             grab_window,
@@ -166,15 +169,23 @@ fn grab_keys(display: *mut Display, grab_window: libc::c_ulong) {
             xlib::CurrentTime,
         );
         xlib::XFlush(display);
-        thread::sleep(Duration::from_millis(50));
     }
+    thread::sleep(Duration::from_millis(50));
 }
 
-fn ungrab_keys(display: *mut Display) {
+fn ungrab_keys(display: Arc<Mutex<u64>>) {
+    {
+        let lock = display.lock().unwrap();
+        let display = *lock as *mut xlib::Display;
+        ungrab_keys_(display);
+    }
+    thread::sleep(Duration::from_millis(50));
+}
+
+fn ungrab_keys_(display: *mut xlib::Display) {
     unsafe {
         xlib::XUngrabKeyboard(display, xlib::CurrentTime);
         xlib::XFlush(display);
-        thread::sleep(Duration::from_millis(50));
     }
 }
 
@@ -230,9 +241,12 @@ fn read_x_event(x_event: &mut xlib::XEvent, display: *mut xlib::Display) {
     }
 }
 
-fn start_grab_control_thread(display: u64, grab_window: Window, rx: Receiver<GrabControl>) {
+fn start_grab_control_thread(
+    display: Arc<Mutex<u64>>,
+    grab_window: Window,
+    rx: Receiver<GrabControl>,
+) {
     std::thread::spawn(move || {
-        let display = display as *mut xlib::Display;
         loop {
             match rx.recv() {
                 Ok(evt) => match evt {
@@ -243,10 +257,10 @@ fn start_grab_control_thread(display: u64, grab_window: Window, rx: Receiver<Gra
                         break;
                     }
                     GrabControl::Grab => {
-                        grab_keys(display, grab_window);
+                        grab_keys(display.clone(), grab_window);
                     }
                     GrabControl::UnGrab => {
-                        ungrab_keys(display);
+                        ungrab_keys(display.clone());
                     }
                 },
                 Err(e) => {
@@ -259,7 +273,7 @@ fn start_grab_control_thread(display: u64, grab_window: Window, rx: Receiver<Gra
     });
 }
 
-fn loop_poll_x_event(display: *mut xlib::Display, mut poll: Poll) {
+fn loop_poll_x_event(display: Arc<Mutex<u64>>, mut poll: Poll) {
     let mut x_event: xlib::XEvent = unsafe { zeroed() };
     let mut events = Events::with_capacity(128);
     loop {
@@ -272,6 +286,8 @@ fn loop_poll_x_event(display: *mut xlib::Display, mut poll: Poll) {
                 for event in &events {
                     match event.token() {
                         GRAB_RECV => {
+                            let lock = display.lock().unwrap();
+                            let display = *lock as *mut xlib::Display;
                             read_x_event(&mut x_event, display);
                         }
                         _ => {}
