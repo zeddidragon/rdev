@@ -90,10 +90,12 @@ extern "C" {
         tap: CFMachPortRef,
         order: CFIndex,
     ) -> CFRunLoopSourceRef;
+    pub fn CFRunLoopGetCurrent() -> CFRunLoopRef;
     pub fn CFRunLoopAddSource(rl: CFRunLoopRef, source: CFRunLoopSourceRef, mode: CFRunLoopMode);
     pub fn CFRunLoopGetMain() -> CFRunLoopRef;
     pub fn CGEventTapEnable(tap: CFMachPortRef, enable: bool);
     pub fn CFRunLoopRun();
+    pub fn CFRunLoopStop(rl: CFRunLoopRef);
 
     pub static kCFRunLoopCommonModes: CFRunLoopMode;
 }

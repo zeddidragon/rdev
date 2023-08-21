@@ -18,7 +18,7 @@ pub use crate::macos::common::{map_keycode, set_is_main_thread};
 #[cfg(target_os = "macos")]
 pub use crate::macos::display::display_size;
 #[cfg(target_os = "macos")]
-pub use crate::macos::grab::grab;
+pub use crate::macos::grab::{exit_grab, grab};
 #[cfg(target_os = "macos")]
 pub use crate::macos::keyboard::Keyboard;
 pub use crate::macos::keycodes::*;

@@ -3,7 +3,6 @@ use crate::macos::common::*;
 use crate::rdev::{Event, GrabError};
 use cocoa::base::nil;
 use cocoa::foundation::NSAutoreleasePool;
-use core_foundation::runloop::CFRunLoopGetCurrent;
 use core_graphics::event::{CGEventTapLocation, CGEventType};
 use std::os::raw::c_void;
 
@@ -31,11 +30,18 @@ unsafe extern "C" fn raw_callback(
     cg_event
 }
 
+static mut CUR_LOOP: CFRunLoopSourceRef = std::ptr::null_mut();
+
 pub fn grab<T>(callback: T) -> Result<(), GrabError>
 where
     T: FnMut(Event) -> Option<Event> + 'static,
 {
     unsafe {
+        if !CUR_LOOP.is_null() {
+            // call exit_grab first
+            return Ok(());
+        }
+
         GLOBAL_CALLBACK = Some(Box::new(callback));
         let _pool = NSAutoreleasePool::new(nil);
         let tap = CGEventTapCreate(
@@ -54,11 +60,18 @@ where
             return Err(GrabError::LoopSourceError);
         }
 
-        let current_loop = CFRunLoopGetCurrent();
-        CFRunLoopAddSource(current_loop as _, _loop, kCFRunLoopCommonModes);
+        CUR_LOOP = CFRunLoopGetCurrent() as _;
+        CFRunLoopAddSource(CUR_LOOP, _loop, kCFRunLoopCommonModes);
 
         CGEventTapEnable(tap, true);
         CFRunLoopRun();
     }
     Ok(())
+}
+
+pub fn exit_grab() {
+    unsafe {
+        CFRunLoopStop(CUR_LOOP);
+        CUR_LOOP = std::ptr::null_mut();
+    }
 }
