@@ -22,7 +22,8 @@ pub const TRUE: i32 = 1;
 #[allow(dead_code)]
 pub const FALSE: i32 = 0;
 
-pub static mut HOOK: HHOOK = null_mut();
+pub static mut KEYBOARD_HOOK: HHOOK = null_mut();
+pub static mut MOUSE_HOOK: HHOOK = null_mut();
 lazy_static! {
     pub(crate) static ref KEYBOARD: Mutex<Keyboard> = Mutex::new(Keyboard::new());
 }
@@ -152,7 +153,7 @@ pub unsafe fn set_key_hook(callback: RawCallback) -> Result<(), HookError> {
         let error = GetLastError();
         return Err(HookError::Key(error));
     }
-    HOOK = hook;
+    KEYBOARD_HOOK = hook;
     Ok(())
 }
 
@@ -162,6 +163,6 @@ pub unsafe fn set_mouse_hook(callback: RawCallback) -> Result<(), HookError> {
         let error = GetLastError();
         return Err(HookError::Mouse(error));
     }
-    HOOK = hook;
+    MOUSE_HOOK = hook;
     Ok(())
 }

@@ -409,7 +409,7 @@ mod tests {
     #[test]
     fn test_keyboard_state() {
         // S
-        let mut keyboard = Keyboard::new().unwrap();
+        let mut keyboard = Keyboard::new();
         let char_s = keyboard
             .add(&EventType::KeyPress(Key::KeyS))
             .unwrap()
