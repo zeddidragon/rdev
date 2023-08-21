@@ -24,11 +24,11 @@ static KEYEVENTF_KEYDOWN: DWORD = 0;
 static mut DW_MOUSE_EXTRA_INFO: usize = 0;
 static mut DW_KEYBOARD_EXTRA_INFO: usize = 0;
 
-pub fn set_dw_mouse_extra_info(extra: usize) {
+pub fn set_mouse_extra_info(extra: usize) {
     unsafe { DW_MOUSE_EXTRA_INFO = extra }
 }
 
-pub fn set_dw_keyboard_extra_info(extra: usize) {
+pub fn set_keyboard_extra_info(extra: usize) {
     unsafe { DW_KEYBOARD_EXTRA_INFO = extra }
 }
 

@@ -25,4 +25,6 @@ pub use crate::macos::keycodes::*;
 #[cfg(target_os = "macos")]
 pub use crate::macos::listen::listen;
 #[cfg(target_os = "macos")]
-pub use crate::macos::simulate::{simulate, VirtualInput};
+pub use crate::macos::simulate::{
+    set_keyboard_extra_info, set_mouse_extra_info, simulate, VirtualInput,
+};

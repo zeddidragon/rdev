@@ -23,10 +23,10 @@ fn callback(event: Event) -> Option<Event> {
             #[cfg(target_os = "macos")]
             {
                 win_scancode =
-                    rdev::macos_code_to_win_scancode(event.platform_code as _).unwrap_or(0);
+                    rdev::macos_code_to_win_scancode(event.platform_code as _).unwrap_or(0) as _;
                 macos_keycode = event.platform_code as _;
                 linux_keycode =
-                    rdev::macos_code_to_linux_code(event.platform_code as _).unwrap_or(0);
+                    rdev::macos_code_to_linux_code(event.platform_code as _).unwrap_or(0) as _;
             };
             #[cfg(target_os = "linux")]
             {

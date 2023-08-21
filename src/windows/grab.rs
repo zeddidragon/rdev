@@ -4,7 +4,10 @@ use crate::windows::common::{
 };
 use std::ptr::null_mut;
 use std::time::SystemTime;
-use winapi::um::winuser::{CallNextHookEx, GetMessageA, HC_ACTION};
+use winapi::{
+    shared::basetsd::ULONG_PTR,
+    um::winuser::{CallNextHookEx, GetMessageA, HC_ACTION, PKBDLLHOOKSTRUCT, PMOUSEHOOKSTRUCT},
+};
 
 static mut GLOBAL_CALLBACK: Option<Box<dyn FnMut(Event) -> Option<Event>>> = None;
 static mut GET_KEY_UNICODE: bool = true;
@@ -19,7 +22,12 @@ pub fn set_event_popup(b: bool) {
     KEYBOARD.lock().unwrap().set_event_popup(b);
 }
 
-unsafe extern "system" fn raw_callback(code: i32, param: usize, lpdata: isize) -> isize {
+unsafe fn raw_callback(
+    code: i32,
+    param: usize,
+    lpdata: isize,
+    f_get_extra_data: impl FnOnce(isize) -> ULONG_PTR,
+) -> isize {
     if code == HC_ACTION {
         let (opt, code) = convert(param, lpdata);
         if let Some(event_type) = opt {
@@ -40,6 +48,7 @@ unsafe extern "system" fn raw_callback(code: i32, param: usize, lpdata: isize) -
                 unicode,
                 platform_code: code as _,
                 position_code: get_scan_code(lpdata),
+                extra_data: f_get_extra_data(lpdata),
             };
             if let Some(callback) = &mut GLOBAL_CALLBACK {
                 if callback(event).is_none() {
@@ -54,6 +63,19 @@ unsafe extern "system" fn raw_callback(code: i32, param: usize, lpdata: isize) -
     }
     CallNextHookEx(HOOK, code, param, lpdata)
 }
+
+unsafe extern "system" fn raw_callback_mouse(code: i32, param: usize, lpdata: isize) -> isize {
+    raw_callback(code, param, lpdata, |data: isize| unsafe {
+        (*(data as PMOUSEHOOKSTRUCT)).dwExtraInfo
+    })
+}
+
+unsafe extern "system" fn raw_callback_keyboard(code: i32, param: usize, lpdata: isize) -> isize {
+    raw_callback(code, param, lpdata, |data: isize| unsafe {
+        (*(data as PKBDLLHOOKSTRUCT)).dwExtraInfo
+    })
+}
+
 impl From<HookError> for GrabError {
     fn from(error: HookError) -> Self {
         match error {
@@ -69,9 +91,9 @@ where
 {
     unsafe {
         GLOBAL_CALLBACK = Some(Box::new(callback));
-        set_key_hook(raw_callback)?;
+        set_key_hook(raw_callback_keyboard)?;
         if !crate::keyboard_only() {
-            set_mouse_hook(raw_callback)?;
+            set_mouse_hook(raw_callback_mouse)?;
         }
 
         GetMessageA(null_mut(), null_mut(), 0, 0);

@@ -7,12 +7,23 @@ use crate::rdev::{Button, EventType, RawKey, SimulateError};
 use core_graphics::{
     event::{
         CGEvent, CGEventFlags, CGEventTapLocation, CGEventType, CGKeyCode, CGMouseButton,
-        ScrollEventUnit,
+        EventField, ScrollEventUnit,
     },
     event_source::{CGEventSource, CGEventSourceStateID},
     geometry::CGPoint,
 };
 use std::convert::TryInto;
+
+static mut MOUSE_EXTRA_INFO: i64 = 0;
+static mut KEYBOARD_EXTRA_INFO: i64 = 0;
+
+pub fn set_mouse_extra_info(extra: i64) {
+    unsafe { MOUSE_EXTRA_INFO = extra }
+}
+
+pub fn set_keyboard_extra_info(extra: i64) {
+    unsafe { KEYBOARD_EXTRA_INFO = extra }
+}
 
 #[allow(non_upper_case_globals)]
 fn workaround_fn(event: CGEvent, keycode: CGKeyCode) -> CGEvent {
@@ -138,6 +149,7 @@ unsafe fn get_current_mouse_location() -> Option<CGPoint> {
 pub fn simulate(event_type: &EventType) -> Result<(), SimulateError> {
     unsafe {
         if let Some(cg_event) = convert_native(event_type) {
+            cg_event.set_integer_value_field(EventField::EVENT_SOURCE_USER_DATA, MOUSE_EXTRA_INFO);
             cg_event.post(CGEventTapLocation::HID);
             Ok(())
         } else {

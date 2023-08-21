@@ -262,9 +262,9 @@ pub enum Key {
     RawKey(RawKey),
 }
 
-#[cfg(not(target_os="macos"))]
+#[cfg(not(target_os = "macos"))]
 pub type KeyCode = u32;
-#[cfg(target_os="macos")]
+#[cfg(target_os = "macos")]
 pub type KeyCode = crate::CGKeyCode;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, EnumIter)]
@@ -348,6 +348,10 @@ pub struct Event {
     // WIndows: vkcod
     pub platform_code: u32,
     pub position_code: u32,
+    #[cfg(target_os = "windows")]
+    pub extra_data: winapi::shared::basetsd::ULONG_PTR,
+    #[cfg(target_os = "macos")]
+    pub extra_data: i64,
 }
 
 /// We can define a dummy Keyboard, that we will use to detect

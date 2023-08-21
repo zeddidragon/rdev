@@ -222,6 +222,7 @@ pub unsafe fn convert(
             unicode,
             platform_code: code as _,
             position_code: 0 as _,
+            extra_data: cg_event.get_integer_value_field(EventField::EVENT_SOURCE_USER_DATA),
         });
     }
     None

@@ -349,12 +349,16 @@ pub fn display_size() -> Result<(u64, u64), DisplayError> {
 pub use crate::linux::{disable_grab, enable_grab, exit_grab_listen, start_grab_listen};
 #[cfg(target_os = "macos")]
 pub use crate::macos::grab as _grab;
+#[cfg(target_os = "macos")]
+pub use crate::macos::set_keyboard_extra_info;
+#[cfg(target_os = "macos")]
+pub use crate::macos::set_mouse_extra_info;
 #[cfg(target_os = "windows")]
 pub use crate::windows::grab as _grab;
 #[cfg(target_os = "windows")]
-pub use crate::windows::set_dw_keyboard_extra_info;
+pub use crate::windows::set_keyboard_extra_info;
 #[cfg(target_os = "windows")]
-pub use crate::windows::set_dw_mouse_extra_info;
+pub use crate::windows::set_mouse_extra_info;
 #[cfg(target_os = "windows")]
 pub use crate::windows::{set_event_popup, set_get_key_unicode};
 
