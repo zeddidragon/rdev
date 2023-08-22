@@ -39,7 +39,7 @@ pub fn get_modifier(key: Key) -> bool {
 pub unsafe fn get_code(lpdata: LPARAM) -> DWORD {
     let kb = *(lpdata as *const KBDLLHOOKSTRUCT);
     // https://learn.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes#:~:text=OEM%20specific-,VK_PACKET,-0xE7
-    if kb.vkCode == VK_PACKET as _ {
+    if kb.vkCode == VK_PACKET as u32 {
         kb.scanCode
     } else {
         kb.vkCode

@@ -1,11 +1,12 @@
 use crate::rdev::{Event, EventType, GrabError};
 use crate::windows::common::{
-    convert, get_scan_code, set_key_hook, set_mouse_hook, HookError, HOOK, KEYBOARD,
+    convert, get_scan_code, set_key_hook, set_mouse_hook, HookError, KEYBOARD, KEYBOARD_HOOK,
+    MOUSE_HOOK,
 };
 use std::ptr::null_mut;
 use std::time::SystemTime;
 use winapi::{
-    shared::basetsd::ULONG_PTR,
+    shared::{basetsd::ULONG_PTR, windef::HHOOK},
     um::winuser::{CallNextHookEx, GetMessageA, HC_ACTION, PKBDLLHOOKSTRUCT, PMOUSEHOOKSTRUCT},
 };
 
@@ -23,6 +24,7 @@ pub fn set_event_popup(b: bool) {
 }
 
 unsafe fn raw_callback(
+    hhk: HHOOK,
     code: i32,
     param: usize,
     lpdata: isize,
@@ -61,17 +63,17 @@ unsafe fn raw_callback(
             }
         }
     }
-    CallNextHookEx(HOOK, code, param, lpdata)
+    CallNextHookEx(hhk, code, param, lpdata)
 }
 
 unsafe extern "system" fn raw_callback_mouse(code: i32, param: usize, lpdata: isize) -> isize {
-    raw_callback(code, param, lpdata, |data: isize| unsafe {
+    raw_callback(MOUSE_HOOK, code, param, lpdata, |data: isize| unsafe {
         (*(data as PMOUSEHOOKSTRUCT)).dwExtraInfo
     })
 }
 
 unsafe extern "system" fn raw_callback_keyboard(code: i32, param: usize, lpdata: isize) -> isize {
-    raw_callback(code, param, lpdata, |data: isize| unsafe {
+    raw_callback(KEYBOARD_HOOK, code, param, lpdata, |data: isize| unsafe {
         (*(data as PKBDLLHOOKSTRUCT)).dwExtraInfo
     })
 }
