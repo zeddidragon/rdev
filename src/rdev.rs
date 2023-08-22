@@ -49,7 +49,7 @@ pub enum GrabError {
     /// Linux
     MissingDisplayError,
     /// Linux
-    MissScreenError,
+    MissingScreenError,
     // Linux
     InvalidFileDescriptor,
     /// Linux
@@ -60,6 +60,8 @@ pub enum GrabError {
     MouseHookError(u32),
     /// All
     SimulateError,
+    /// All
+    ExitGrabError(String),
 
     IoError(std::io::Error),
 }

@@ -19,7 +19,7 @@ pub use crate::windows::common::*;
 #[cfg(target_os = "windows")]
 pub use crate::windows::display::display_size;
 #[cfg(target_os = "windows")]
-pub use crate::windows::grab::{grab, set_event_popup, set_get_key_unicode};
+pub use crate::windows::grab::{exit_grab, grab, set_event_popup, set_get_key_unicode};
 #[cfg(target_os = "windows")]
 pub use crate::windows::keyboard::Keyboard;
 pub use crate::windows::keycodes::*;

@@ -66,7 +66,7 @@ impl KeyboardGrabber {
         let screen_number = unsafe { xlib::XDefaultScreen(grabber.display) };
         grabber.screen = unsafe { xlib::XScreenOfDisplay(grabber.display, screen_number) };
         if grabber.screen.is_null() {
-            return Err(GrabError::MissScreenError);
+            return Err(GrabError::MissingScreenError);
         }
 
         grabber.window = unsafe { xlib::XRootWindowOfScreen(grabber.screen) };

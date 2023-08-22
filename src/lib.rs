@@ -354,11 +354,11 @@ pub use crate::macos::set_mouse_extra_info;
 #[cfg(target_os = "macos")]
 pub use crate::macos::{exit_grab, grab as _grab};
 #[cfg(target_os = "windows")]
-pub use crate::windows::grab as _grab;
-#[cfg(target_os = "windows")]
 pub use crate::windows::set_keyboard_extra_info;
 #[cfg(target_os = "windows")]
 pub use crate::windows::set_mouse_extra_info;
+#[cfg(target_os = "windows")]
+pub use crate::windows::{exit_grab, grab as _grab};
 #[cfg(target_os = "windows")]
 pub use crate::windows::{set_event_popup, set_get_key_unicode};
 

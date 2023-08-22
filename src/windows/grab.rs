@@ -1,17 +1,34 @@
-use crate::rdev::{Event, EventType, GrabError};
-use crate::windows::common::{
-    convert, get_scan_code, set_key_hook, set_mouse_hook, HookError, KEYBOARD, KEYBOARD_HOOK,
-    MOUSE_HOOK,
+use crate::{
+    rdev::{Event, EventType, GrabError},
+    windows::common::{convert, get_scan_code, HookError, KEYBOARD},
 };
-use std::ptr::null_mut;
-use std::time::SystemTime;
+use std::{ptr::null_mut, sync::Mutex, time::SystemTime};
 use winapi::{
-    shared::{basetsd::ULONG_PTR, windef::HHOOK},
-    um::winuser::{CallNextHookEx, GetMessageA, HC_ACTION, PKBDLLHOOKSTRUCT, PMOUSEHOOKSTRUCT},
+    shared::{
+        basetsd::ULONG_PTR,
+        minwindef::{DWORD, FALSE},
+        ntdef::NULL,
+        windef::POINT,
+    },
+    um::{
+        errhandlingapi::GetLastError,
+        processthreadsapi::GetCurrentThreadId,
+        winuser::{
+            CallNextHookEx, DispatchMessageA, GetMessageA, PostThreadMessageA, SetWindowsHookExA,
+            TranslateMessage, UnhookWindowsHookEx, HC_ACTION, MSG, PKBDLLHOOKSTRUCT,
+            PMOUSEHOOKSTRUCT, WH_KEYBOARD_LL, WH_MOUSE_LL, WM_USER,
+        },
+    },
 };
 
 static mut GLOBAL_CALLBACK: Option<Box<dyn FnMut(Event) -> Option<Event>>> = None;
 static mut GET_KEY_UNICODE: bool = true;
+
+lazy_static::lazy_static! {
+    static ref CUR_HOOK_THREAD_ID: Mutex<DWORD> = Mutex::new(0);
+}
+
+const WM_USER_EXIT_HOOK: u32 = WM_USER + 1;
 
 pub fn set_get_key_unicode(b: bool) {
     unsafe {
@@ -24,7 +41,6 @@ pub fn set_event_popup(b: bool) {
 }
 
 unsafe fn raw_callback(
-    hhk: HHOOK,
     code: i32,
     param: usize,
     lpdata: isize,
@@ -57,23 +73,23 @@ unsafe fn raw_callback(
                     // https://stackoverflow.com/questions/42756284/blocking-windows-mouse-click-using-setwindowshookex
                     // https://android.developreference.com/article/14560004/Blocking+windows+mouse+click+using+SetWindowsHookEx()
                     // https://cboard.cprogramming.com/windows-programming/99678-setwindowshookex-wm_keyboard_ll.html
-                    // let _result = CallNextHookEx(HOOK, code, param, lpdata);
+                    // let _result = CallNextHookEx(hhk, code, param, lpdata);
                     return 1;
                 }
             }
         }
     }
-    CallNextHookEx(hhk, code, param, lpdata)
+    CallNextHookEx(null_mut(), code, param, lpdata)
 }
 
 unsafe extern "system" fn raw_callback_mouse(code: i32, param: usize, lpdata: isize) -> isize {
-    raw_callback(MOUSE_HOOK, code, param, lpdata, |data: isize| unsafe {
+    raw_callback(code, param, lpdata, |data: isize| unsafe {
         (*(data as PMOUSEHOOKSTRUCT)).dwExtraInfo
     })
 }
 
 unsafe extern "system" fn raw_callback_keyboard(code: i32, param: usize, lpdata: isize) -> isize {
-    raw_callback(KEYBOARD_HOOK, code, param, lpdata, |data: isize| unsafe {
+    raw_callback(code, param, lpdata, |data: isize| unsafe {
         (*(data as PKBDLLHOOKSTRUCT)).dwExtraInfo
     })
 }
@@ -91,14 +107,79 @@ pub fn grab<T>(callback: T) -> Result<(), GrabError>
 where
     T: FnMut(Event) -> Option<Event> + 'static,
 {
+    let mut cur_hook_thread_id = CUR_HOOK_THREAD_ID.lock().unwrap();
+    if *cur_hook_thread_id != 0 {
+        // already hooked
+        return Ok(());
+    }
+
     unsafe {
         GLOBAL_CALLBACK = Some(Box::new(callback));
-        set_key_hook(raw_callback_keyboard)?;
-        if !crate::keyboard_only() {
-            set_mouse_hook(raw_callback_mouse)?;
+        let hook_keyboard =
+            SetWindowsHookExA(WH_KEYBOARD_LL, Some(raw_callback_keyboard), null_mut(), 0);
+        if hook_keyboard.is_null() {
+            return Err(GrabError::KeyHookError(GetLastError()));
         }
 
-        GetMessageA(null_mut(), null_mut(), 0, 0);
+        let mut hook_mouse = null_mut();
+        if !crate::keyboard_only() {
+            hook_mouse = SetWindowsHookExA(WH_MOUSE_LL, Some(raw_callback_mouse), null_mut(), 0);
+            if hook_mouse.is_null() {
+                if FALSE == UnhookWindowsHookEx(hook_keyboard) {
+                    // Fatal error
+                    log::error!(" UnhookWindowsHookEx keyboard {}", GetLastError());
+                }
+                return Err(GrabError::MouseHookError(GetLastError()));
+            }
+        }
+        *cur_hook_thread_id = GetCurrentThreadId();
+
+        let mut msg = MSG {
+            hwnd: NULL as _,
+            message: 0 as _,
+            wParam: 0 as _,
+            lParam: 0 as _,
+            time: 0 as _,
+            pt: POINT {
+                x: 0 as _,
+                y: 0 as _,
+            },
+        };
+        while FALSE != GetMessageA(&mut msg, NULL as _, 0, 0) {
+            if msg.message == WM_USER_EXIT_HOOK {
+                break;
+            }
+
+            TranslateMessage(&msg);
+            DispatchMessageA(&msg);
+        }
+
+        if FALSE == UnhookWindowsHookEx(hook_keyboard as _) {
+            // Fatal error
+            log::error!("Failed UnhookWindowsHookEx keyboard {}", GetLastError());
+        }
+
+        if FALSE == UnhookWindowsHookEx(hook_mouse as _) {
+            // Fatal error
+            log::error!("Failed UnhookWindowsHookEx mouse {}", GetLastError());
+        }
+
+        *CUR_HOOK_THREAD_ID.lock().unwrap() = 0;
+    }
+    Ok(())
+}
+
+pub fn exit_grab() -> Result<(), GrabError> {
+    unsafe {
+        let cur_hook_thread_id = CUR_HOOK_THREAD_ID.lock().unwrap();
+        if *cur_hook_thread_id != 0 {
+            if FALSE == PostThreadMessageA(*cur_hook_thread_id, WM_USER_EXIT_HOOK, 0, 0) {
+                return Err(GrabError::ExitGrabError(format!(
+                    "Failed to post message to exit hook, {}",
+                    GetLastError()
+                )));
+            }
+        }
     }
     Ok(())
 }
