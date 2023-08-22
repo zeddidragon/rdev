@@ -8,7 +8,7 @@ use winapi::{
         basetsd::ULONG_PTR,
         minwindef::{DWORD, FALSE},
         ntdef::NULL,
-        windef::POINT,
+        windef::{HHOOK, POINT},
     },
     um::{
         errhandlingapi::GetLastError,
@@ -103,25 +103,26 @@ impl From<HookError> for GrabError {
     }
 }
 
-pub fn grab<T>(callback: T) -> Result<(), GrabError>
+fn do_hook<T>(callback: T) -> Result<(HHOOK, HHOOK), GrabError>
 where
     T: FnMut(Event) -> Option<Event> + 'static,
 {
     let mut cur_hook_thread_id = CUR_HOOK_THREAD_ID.lock().unwrap();
     if *cur_hook_thread_id != 0 {
         // already hooked
-        return Ok(());
+        return Ok((null_mut(), null_mut()));
     }
 
+    let hook_keyboard;
+    let mut hook_mouse = null_mut();
     unsafe {
         GLOBAL_CALLBACK = Some(Box::new(callback));
-        let hook_keyboard =
+        hook_keyboard =
             SetWindowsHookExA(WH_KEYBOARD_LL, Some(raw_callback_keyboard), null_mut(), 0);
         if hook_keyboard.is_null() {
             return Err(GrabError::KeyHookError(GetLastError()));
         }
 
-        let mut hook_mouse = null_mut();
         if !crate::keyboard_only() {
             hook_mouse = SetWindowsHookExA(WH_MOUSE_LL, Some(raw_callback_mouse), null_mut(), 0);
             if hook_mouse.is_null() {
@@ -133,6 +134,20 @@ where
             }
         }
         *cur_hook_thread_id = GetCurrentThreadId();
+    }
+
+    Ok((hook_keyboard, hook_mouse))
+}
+
+pub fn grab<T>(callback: T) -> Result<(), GrabError>
+where
+    T: FnMut(Event) -> Option<Event> + 'static,
+{
+    unsafe {
+        let (hook_keyboard, hook_mouse) = do_hook(callback)?;
+        if hook_keyboard.is_null() && hook_mouse.is_null() {
+            return Ok(());
+        }
 
         let mut msg = MSG {
             hwnd: NULL as _,
@@ -171,7 +186,7 @@ where
 
 pub fn exit_grab() -> Result<(), GrabError> {
     unsafe {
-        let cur_hook_thread_id = CUR_HOOK_THREAD_ID.lock().unwrap();
+        let mut cur_hook_thread_id = CUR_HOOK_THREAD_ID.lock().unwrap();
         if *cur_hook_thread_id != 0 {
             if FALSE == PostThreadMessageA(*cur_hook_thread_id, WM_USER_EXIT_HOOK, 0, 0) {
                 return Err(GrabError::ExitGrabError(format!(
@@ -180,6 +195,7 @@ pub fn exit_grab() -> Result<(), GrabError> {
                 )));
             }
         }
+        *cur_hook_thread_id = 0;
     }
     Ok(())
 }
