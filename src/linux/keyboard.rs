@@ -5,7 +5,7 @@ use std::convert::TryInto;
 use std::ffi::{CStr, CString};
 use std::os::raw::{c_char, c_int, c_uint, c_ulong, c_void};
 use std::ptr::{null, null_mut, NonNull};
-use x11::xlib::{self, KeySym, XKeyEvent, XKeysymToString};
+use x11::xlib::{self, KeySym, XKeyEvent, XKeysymToString, XSupportsLocale};
 
 #[derive(Debug)]
 pub struct MyXIM(xlib::XIM);
@@ -49,10 +49,18 @@ impl Keyboard {
             if dpy.is_null() {
                 return None;
             }
-
+            // Try system localle first
             let string = CString::new("").ok()?;
             libc::setlocale(libc::LC_ALL, string.as_ptr());
-            // https://stackoverflow.com/questions/18246848/get-utf-8-input-with-x11-display#
+            // If not supported try C.UTF-8
+            if XSupportsLocale() == 0 {
+                let string = CString::new("C.UTF-8").ok()?;
+                libc::setlocale(libc::LC_ALL, string.as_ptr());
+            }
+            if XSupportsLocale() == 0 {
+                let string = CString::new("C").ok()?;
+                libc::setlocale(libc::LC_ALL, string.as_ptr());
+            }
             let string = CString::new("@im=none").ok()?;
             let ret = xlib::XSetLocaleModifiers(string.as_ptr());
             NonNull::new(ret)?;
