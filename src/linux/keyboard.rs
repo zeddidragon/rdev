@@ -49,6 +49,7 @@ impl Keyboard {
             if dpy.is_null() {
                 return None;
             }
+            // https://stackoverflow.com/questions/18246848/get-utf-8-input-with-x11-display#
             // Try system localle first
             let string = CString::new("").ok()?;
             libc::setlocale(libc::LC_ALL, string.as_ptr());
