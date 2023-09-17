@@ -71,8 +71,10 @@ where
 
 pub fn exit_grab() -> Result<(), GrabError> {
     unsafe {
-        CFRunLoopStop(CUR_LOOP);
-        CUR_LOOP = std::ptr::null_mut();
+        if !CUR_LOOP.is_null() {
+            CFRunLoopStop(CUR_LOOP);
+            CUR_LOOP = std::ptr::null_mut();
+        }
     }
     Ok(())
 }
