@@ -2,6 +2,7 @@
 use crate::linux::code_from_key as linux_code_from_keycode;
 #[cfg(target_os = "linux")]
 use crate::linux::key_from_code as linux_keycode_from_code;
+use crate::android::code_from_key as android_code_from_keycode;
 #[cfg(any(target_os = "windows", target_os = "linux"))]
 use crate::macos::{code_from_key as macos_code_from_keycode, virtual_keycodes::*};
 #[cfg(target_os = "macos")]
@@ -60,6 +61,13 @@ conv_keycodes!(
     win_key_from_scancode,
     macos_iso_code_from_keycode
 );
+#[cfg(target_os = "windows")]
+// From Win scancode to android keycode
+conv_keycodes!(
+    win_scancode_to_android_key_code,
+    win_key_from_scancode,
+    android_code_from_keycode
+);
 #[cfg(target_os = "linux")]
 conv_keycodes!(
     linux_code_to_win_scancode,
@@ -79,6 +87,12 @@ conv_keycodes!(
     linux_keycode_from_code,
     macos_iso_code_from_keycode
 );
+#[cfg(target_os = "linux")]
+conv_keycodes!(
+    linux_code_to_android_key_code,
+    linux_keycode_from_code,
+    android_code_from_keycode
+);
 #[cfg(target_os = "macos")]
 conv_keycodes!(
     macos_code_to_win_scancode,
@@ -90,4 +104,10 @@ conv_keycodes!(
     macos_code_to_linux_code,
     macos_keycode_from_code_,
     linux_code_from_keycode
+);
+#[cfg(target_os = "macos")]
+conv_keycodes!(
+    macos_code_to_android_key_code,
+    macos_keycode_from_code_,
+    android_code_from_keycode
 );

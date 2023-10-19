@@ -226,6 +226,7 @@ pub use crate::rdev::{
 mod linux;
 mod macos;
 mod windows;
+mod android;
 
 mod codes_conv;
 
