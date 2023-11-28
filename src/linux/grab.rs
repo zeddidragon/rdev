@@ -45,8 +45,8 @@ lazy_static::lazy_static! {
 }
 
 const KEYPRESS_EVENT: i32 = 2;
-
-static mut EXIT_GRAB: bool = false;
+// It is ok to use unsafe mut here.
+static mut IS_GRABBING: bool = false;
 static mut GLOBAL_CALLBACK: Option<Box<dyn FnMut(Event) -> Option<Event>>> = None;
 const GRAB_RECV: Token = Token(0);
 
@@ -252,7 +252,7 @@ fn start_grab_control_thread(
                 Ok(evt) => match evt {
                     GrabControl::Exit => {
                         unsafe {
-                            EXIT_GRAB = true;
+                            IS_GRABBING = false;
                         }
                         break;
                     }
@@ -277,7 +277,7 @@ fn loop_poll_x_event(display: Arc<Mutex<u64>>, mut poll: Poll) {
     let mut x_event: xlib::XEvent = unsafe { zeroed() };
     let mut events = Events::with_capacity(128);
     loop {
-        if unsafe { EXIT_GRAB } {
+        if unsafe { !IS_GRABBING } {
             break;
         }
 
@@ -312,8 +312,10 @@ fn start_grab_thread() {
     thread::spawn(|| {
         let mut c = 0;
         loop {
-            if unsafe { EXIT_GRAB } {
-                break;
+            unsafe {
+                if !IS_GRABBING {
+                    break;
+                }
             }
             if let Err(err) = start_grab() {
                 log::debug!("Failed to start grab keyboard, {:?}", err);
@@ -359,7 +361,7 @@ pub fn disable_grab() {
 
 #[inline]
 pub fn is_grabbed() -> bool {
-    true
+    unsafe { IS_GRABBING }
 }
 
 pub fn start_grab_listen<T>(callback: T) -> Result<(), GrabError>
@@ -367,8 +369,12 @@ where
     T: FnMut(Event) -> Option<Event> + 'static,
 {
     unsafe {
+        if IS_GRABBING {
+            return Ok(());
+        }
         GLOBAL_CALLBACK = Some(Box::new(callback));
     }
+
     start_grab_service()?;
     thread::sleep(Duration::from_millis(100));
     Ok(())
@@ -376,7 +382,7 @@ where
 
 pub fn exit_grab_listen() {
     unsafe {
-        EXIT_GRAB = true;
+        IS_GRABBING = false;
     }
     if let Some(tx) = GRAB_KEY_EVENT_SENDER.lock().unwrap().as_ref() {
         tx.send(GrabEvent::Exit).ok();
