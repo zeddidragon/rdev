@@ -357,6 +357,11 @@ pub fn disable_grab() {
     send_grab_control(GrabControl::UnGrab);
 }
 
+#[inline]
+pub fn is_grabbed() -> bool {
+    true
+}
+
 pub fn start_grab_listen<T>(callback: T) -> Result<(), GrabError>
 where
     T: FnMut(Event) -> Option<Event> + 'static,
