@@ -1,7 +1,9 @@
 #![allow(non_upper_case_globals)]
 
-use super::virtual_keycodes::*;
+use super::macos_virtual_keycodes::*;
 use crate::rdev::Key;
+
+pub use super::macos_virtual_keycodes as virtual_keycodes;
 
 macro_rules! decl_keycodes {
     ($($key:ident, $code:ident),*) => {

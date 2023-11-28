@@ -1,14 +1,14 @@
 #[cfg(any(target_os = "windows", target_os = "macos"))]
-use crate::linux::code_from_key as linux_code_from_keycode;
+use crate::keycodes::linux::code_from_key as linux_code_from_keycode;
 #[cfg(target_os = "linux")]
 use crate::linux::key_from_code as linux_keycode_from_code;
-use crate::android::code_from_key as android_code_from_keycode;
+use crate::keycodes::android::code_from_key as android_code_from_keycode;
 #[cfg(any(target_os = "windows", target_os = "linux"))]
-use crate::macos::{code_from_key as macos_code_from_keycode, virtual_keycodes::*};
+use crate::keycodes::macos::{code_from_key as macos_code_from_keycode, virtual_keycodes::*};
 #[cfg(target_os = "macos")]
 use crate::macos::{key_from_code as macos_keycode_from_code, map_keycode};
 #[cfg(target_os = "windows")]
-use crate::windows::key_from_scancode as win_key_from_scancode;
+use crate::keycodes::windows::key_from_scancode as win_key_from_scancode;
 #[cfg(any(target_os = "macos", target_os = "linux"))]
 use crate::windows::scancode_from_key as win_scancode_from_key;
 use crate::{Key, KeyCode};

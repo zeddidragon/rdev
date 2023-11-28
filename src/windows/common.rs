@@ -1,6 +1,6 @@
 use crate::rdev::{Button, EventType, Key};
 use crate::windows::keyboard::Keyboard;
-use crate::windows::keycodes::key_from_code;
+use crate::keycodes::windows::key_from_code;
 use lazy_static::lazy_static;
 use std::convert::TryInto;
 use std::os::raw::{c_int, c_short};

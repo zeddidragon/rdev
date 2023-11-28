@@ -2,7 +2,7 @@ use crate::{
     rdev::{Event, EventType, GrabError},
     windows::common::{convert, get_scan_code, HookError, KEYBOARD},
 };
-use std::{ptr::null_mut, sync::Mutex, time::SystemTime};
+use std::{io::Error, ptr::null_mut, sync::Mutex, time::SystemTime};
 use winapi::{
     shared::{
         basetsd::ULONG_PTR,
@@ -128,7 +128,7 @@ where
             if hook_mouse.is_null() {
                 if FALSE == UnhookWindowsHookEx(hook_keyboard) {
                     // Fatal error
-                    log::error!(" UnhookWindowsHookEx keyboard {}", GetLastError());
+                    log::error!("UnhookWindowsHookEx keyboard {}", Error::last_os_error());
                 }
                 return Err(GrabError::MouseHookError(GetLastError()));
             }
@@ -139,12 +139,17 @@ where
     Ok((hook_keyboard, hook_mouse))
 }
 
+#[inline]
+pub fn is_grabbed() -> bool {
+    *CUR_HOOK_THREAD_ID.lock().unwrap() != 0
+}
+
 pub fn grab<T>(callback: T) -> Result<(), GrabError>
 where
     T: FnMut(Event) -> Option<Event> + 'static,
 {
     unsafe {
-        let (hook_keyboard, hook_mouse) = do_hook(callback)?;
+        let (mut hook_keyboard, hook_mouse) = do_hook(callback)?;
         if hook_keyboard.is_null() && hook_mouse.is_null() {
             return Ok(());
         }
@@ -162,21 +167,32 @@ where
         };
         while FALSE != GetMessageA(&mut msg, NULL as _, 0, 0) {
             if msg.message == WM_USER_EXIT_HOOK {
+                if !hook_keyboard.is_null() {
+                    if FALSE == UnhookWindowsHookEx(hook_keyboard as _) {
+                        log::error!(
+                            "Failed UnhookWindowsHookEx keyboard {}",
+                            Error::last_os_error()
+                        );
+                        continue;
+                    }
+                    hook_keyboard = null_mut();
+                }
+
+                if !hook_mouse.is_null() {
+                    if FALSE == UnhookWindowsHookEx(hook_mouse as _) {
+                        log::error!(
+                            "Failed UnhookWindowsHookEx mouse {}",
+                            Error::last_os_error()
+                        );
+                        continue;
+                    }
+                    // hook_mouse = null_mut();
+                }
                 break;
             }
 
             TranslateMessage(&msg);
             DispatchMessageA(&msg);
-        }
-
-        if FALSE == UnhookWindowsHookEx(hook_keyboard as _) {
-            // Fatal error
-            log::error!("Failed UnhookWindowsHookEx keyboard {}", GetLastError());
-        }
-
-        if FALSE == UnhookWindowsHookEx(hook_mouse as _) {
-            // Fatal error
-            log::error!("Failed UnhookWindowsHookEx mouse {}", GetLastError());
         }
 
         *CUR_HOOK_THREAD_ID.lock().unwrap() = 0;

@@ -1,5 +1,5 @@
 use crate::rdev::{Button, EventType, RawKey, SimulateError};
-use crate::windows::keycodes::{get_win_codes, scancode_from_key};
+use crate::keycodes::windows::{get_win_codes, scancode_from_key};
 use crate::Key;
 use std::convert::TryFrom;
 use std::mem::size_of;

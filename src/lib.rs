@@ -223,28 +223,32 @@ pub use crate::rdev::{
     ListenError, RawKey, SimulateError,
 };
 
+mod keycodes;
+#[cfg(target_os = "linux")]
 mod linux;
+#[cfg(target_os = "macos")]
 mod macos;
+#[cfg(target_os = "windows")]
 mod windows;
-mod android;
 
 mod codes_conv;
 
 pub use crate::codes_conv::*;
 
-pub use crate::linux::code_from_key as linux_keycode_from_key;
-pub use crate::macos::code_from_key as macos_keycode_from_key;
-pub use crate::windows::{
+pub use keycodes::linux::code_from_key as linux_keycode_from_key;
+pub use keycodes::macos::code_from_key as macos_keycode_from_key;
+pub use keycodes::windows::{
     code_from_key as win_code_from_key, code_from_key as win_keycode_from_key, get_win_codes,
     get_win_key, key_from_code as win_key_from_keycode, key_from_scancode as win_key_from_scancode,
     scancode_from_key as win_scancode_from_key,
 };
 
-pub use crate::linux::key_from_code as linux_key_from_code;
-pub use crate::macos::key_from_code as macos_key_from_code;
+pub use keycodes::android::key_from_code as android_key_from_code;
+pub use keycodes::linux::key_from_code as linux_key_from_code;
+pub use keycodes::macos::key_from_code as macos_key_from_code;
 
-pub use crate::android::key_from_code as android_key_from_code;
-
+#[cfg(target_os = "macos")]
+pub use crate::keycodes::macos::key_from_code;
 #[cfg(target_os = "macos")]
 use crate::macos::{display_size as _display_size, listen as _listen, simulate as _simulate};
 #[cfg(target_os = "macos")]
@@ -255,17 +259,19 @@ pub use crate::macos::{
 pub use core_graphics::{event::CGEventTapLocation, event_source::CGEventSourceStateID};
 
 #[cfg(any(target_os = "android", target_os = "linux"))]
-pub use crate::linux::key_from_code;
+pub use crate::keycodes::linux::key_from_code;
 #[cfg(target_os = "linux")]
 use crate::linux::{display_size as _display_size, listen as _listen, simulate as _simulate};
 #[cfg(target_os = "linux")]
 pub use crate::linux::{simulate_char, simulate_unicode, Keyboard};
 
 #[cfg(target_os = "windows")]
+pub use crate::keycodes::windows::key_from_scancode;
+#[cfg(target_os = "windows")]
 pub use crate::windows::{
-    display_size as _display_size, get_modifier, key_from_scancode, listen as _listen,
-    set_modifier, simulate as _simulate, simulate_char, simulate_code, simulate_key_unicode,
-    simulate_unicode, simulate_unistr, vk_to_scancode, Keyboard,
+    display_size as _display_size, get_modifier, listen as _listen, set_modifier,
+    simulate as _simulate, simulate_char, simulate_code, simulate_key_unicode, simulate_unicode,
+    simulate_unistr, vk_to_scancode, Keyboard,
 };
 
 /// Listening to global events. Caveat: On MacOS, you require the listen
@@ -361,7 +367,7 @@ pub use crate::windows::set_keyboard_extra_info;
 #[cfg(target_os = "windows")]
 pub use crate::windows::set_mouse_extra_info;
 #[cfg(target_os = "windows")]
-pub use crate::windows::{exit_grab, grab as _grab};
+pub use crate::windows::{exit_grab, grab as _grab, is_grabbed};
 #[cfg(target_os = "windows")]
 pub use crate::windows::{set_event_popup, set_get_key_unicode};
 

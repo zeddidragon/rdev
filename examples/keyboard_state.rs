@@ -1,7 +1,7 @@
 use rdev::{EventType, Key, Keyboard, KeyboardState};
 
 fn main() {
-    let mut keyboard = Keyboard::new().unwrap();
+    let mut keyboard = Keyboard::new();
     let char_s = keyboard
         .add(&EventType::KeyPress(Key::KeyS))
         .unwrap()
