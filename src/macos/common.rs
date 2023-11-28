@@ -1,5 +1,5 @@
 #![allow(clippy::upper_case_acronyms)]
-use super::virtual_keycodes::*;
+use crate::keycodes::macos::virtual_keycodes::*;
 use crate::macos::keyboard::Keyboard;
 use crate::rdev::{Button, Event, EventType, Key};
 use cocoa::base::id;
@@ -13,7 +13,7 @@ use std::os::raw::c_void;
 use std::sync::Mutex;
 use std::time::SystemTime;
 
-use crate::macos::keycodes::key_from_code;
+use crate::keycodes::macos::key_from_code;
 
 pub type CFMachPortRef = *const c_void;
 pub type CFIndex = u64;

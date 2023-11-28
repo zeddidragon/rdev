@@ -248,13 +248,11 @@ pub use keycodes::linux::key_from_code as linux_key_from_code;
 pub use keycodes::macos::key_from_code as macos_key_from_code;
 
 #[cfg(target_os = "macos")]
-pub use crate::keycodes::macos::key_from_code;
+pub use crate::keycodes::macos::{key_from_code, virtual_keycodes::*};
 #[cfg(target_os = "macos")]
 use crate::macos::{display_size as _display_size, listen as _listen, simulate as _simulate};
 #[cfg(target_os = "macos")]
-pub use crate::macos::{
-    key_from_code, set_is_main_thread, virtual_keycodes::*, Keyboard, VirtualInput,
-};
+pub use crate::macos::{set_is_main_thread, Keyboard, VirtualInput};
 #[cfg(target_os = "macos")]
 pub use core_graphics::{event::CGEventTapLocation, event_source::CGEventSourceStateID};
 

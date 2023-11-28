@@ -1,8 +1,11 @@
-use super::virtual_keycodes::{
-    kVK_DownArrow, kVK_End, kVK_ForwardDelete, kVK_Help, kVK_Home, kVK_LeftArrow, kVK_PageDown,
-    kVK_PageUp, kVK_RightArrow, kVK_UpArrow,
+use crate::keycodes::macos::{
+    code_from_key,
+    virtual_keycodes::{
+        kVK_DownArrow, kVK_End, kVK_ForwardDelete, kVK_Help, kVK_Home, kVK_LeftArrow, kVK_PageDown,
+        kVK_PageUp, kVK_RightArrow, kVK_UpArrow,
+    },
 };
-use crate::macos::{common::CGEventSourceKeyState, keycodes::code_from_key};
+use crate::macos::common::CGEventSourceKeyState;
 use crate::rdev::{Button, EventType, RawKey, SimulateError};
 use core_graphics::{
     event::{
