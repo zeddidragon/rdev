@@ -51,7 +51,7 @@ where
         GLOBAL_CALLBACK = Some(Box::new(callback));
         let _pool = NSAutoreleasePool::new(nil);
         let tap = CGEventTapCreate(
-            CGEventTapLocation::HID, // HID, Session, AnnotatedSession,
+            CGEventTapLocation::Session, // HID, Session, AnnotatedSession,
             kCGHeadInsertEventTap,
             CGEventTapOption::Default,
             kCGEventMaskForAllEvents,
