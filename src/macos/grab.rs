@@ -43,12 +43,11 @@ pub fn grab<T>(callback: T) -> Result<(), GrabError>
 where
     T: FnMut(Event) -> Option<Event> + 'static,
 {
-    unsafe {
-        if !CUR_LOOP.is_null() {
-            // call exit_grab first
-            return Ok(());
-        }
+    if is_grabbed() {
+        return Ok(());
+    }
 
+    unsafe {
         GLOBAL_CALLBACK = Some(Box::new(callback));
         let _pool = NSAutoreleasePool::new(nil);
         let tap = CGEventTapCreate(

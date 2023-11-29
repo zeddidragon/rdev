@@ -148,6 +148,10 @@ pub fn grab<T>(callback: T) -> Result<(), GrabError>
 where
     T: FnMut(Event) -> Option<Event> + 'static,
 {
+    if is_grabbed() {
+        return Ok(());
+    }
+
     unsafe {
         let (mut hook_keyboard, hook_mouse) = do_hook(callback)?;
         if hook_keyboard.is_null() && hook_mouse.is_null() {

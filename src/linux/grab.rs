@@ -368,10 +368,11 @@ pub fn start_grab_listen<T>(callback: T) -> Result<(), GrabError>
 where
     T: FnMut(Event) -> Option<Event> + 'static,
 {
+    if is_grabbed() {
+        return Ok(());
+    }
+
     unsafe {
-        if IS_GRABBING {
-            return Ok(());
-        }
         GLOBAL_CALLBACK = Some(Box::new(callback));
     }
 
