@@ -373,6 +373,7 @@ where
     }
 
     unsafe {
+        IS_GRABBING = true;
         GLOBAL_CALLBACK = Some(Box::new(callback));
     }
 
