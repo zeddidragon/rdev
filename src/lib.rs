@@ -235,20 +235,26 @@ mod codes_conv;
 
 pub use crate::codes_conv::*;
 
-pub use keycodes::linux::code_from_key as linux_keycode_from_key;
-pub use keycodes::macos::code_from_key as macos_keycode_from_key;
+pub use keycodes::android::{
+    code_from_key as android_keycode_from_key, key_from_code as android_key_from_code,
+};
+pub use keycodes::linux::{
+    code_from_key as linux_keycode_from_key, key_from_code as linux_key_from_code,
+};
+pub use keycodes::macos::{
+    code_from_key as macos_keycode_from_key, key_from_code as macos_key_from_code,
+};
+pub use keycodes::usb_hid::{
+    code_from_key as usb_hid_keycode_from_key, key_from_code as usb_hid_key_from_code,
+};
 pub use keycodes::windows::{
     code_from_key as win_code_from_key, code_from_key as win_keycode_from_key, get_win_codes,
     get_win_key, key_from_code as win_key_from_keycode, key_from_scancode as win_key_from_scancode,
     scancode_from_key as win_scancode_from_key,
 };
 
-pub use keycodes::android::key_from_code as android_key_from_code;
-pub use keycodes::linux::key_from_code as linux_key_from_code;
-pub use keycodes::macos::key_from_code as macos_key_from_code;
-
 #[cfg(target_os = "macos")]
-pub use crate::keycodes::macos::{key_from_code, virtual_keycodes::*};
+pub use crate::keycodes::macos::{code_from_key, key_from_code, virtual_keycodes::*};
 #[cfg(target_os = "macos")]
 use crate::macos::{display_size as _display_size, listen as _listen, simulate as _simulate};
 #[cfg(target_os = "macos")]
@@ -257,7 +263,7 @@ pub use crate::macos::{set_is_main_thread, Keyboard, VirtualInput};
 pub use core_graphics::{event::CGEventTapLocation, event_source::CGEventSourceStateID};
 
 #[cfg(any(target_os = "android", target_os = "linux"))]
-pub use crate::keycodes::linux::key_from_code;
+pub use crate::keycodes::linux::{code_from_key, key_from_code};
 #[cfg(target_os = "linux")]
 use crate::linux::{display_size as _display_size, listen as _listen, simulate as _simulate};
 #[cfg(target_os = "linux")]
@@ -271,6 +277,8 @@ pub use crate::windows::{
     simulate as _simulate, simulate_char, simulate_code, simulate_key_unicode, simulate_unicode,
     simulate_unistr, vk_to_scancode, Keyboard,
 };
+
+pub use crate::rdev::UnicodeInfo;
 
 /// Listening to global events. Caveat: On MacOS, you require the listen
 /// loop needs to be the primary app (no fork before) and need to have accessibility

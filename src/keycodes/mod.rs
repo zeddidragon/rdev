@@ -1,3 +1,4 @@
+pub mod usb_hid;
 pub mod windows;
 pub mod linux;
 pub mod macos;
