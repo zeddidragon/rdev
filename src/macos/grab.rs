@@ -16,12 +16,13 @@ unsafe extern "C" fn raw_callback(
 ) -> CGEventRef {
     // println!("Event ref {:?}", cg_event_ptr);
     // let cg_event: CGEvent = transmute_copy::<*mut c_void, CGEvent>(&cg_event_ptr);
-    let opt = KEYBOARD_STATE.lock();
-    if let Ok(mut keyboard) = opt {
-        if let Some(event) = convert(_type, &cg_event, &mut keyboard) {
-            if let Some(callback) = &mut GLOBAL_CALLBACK {
-                if callback(event).is_none() {
-                    cg_event.set_type(CGEventType::Null);
+    if let Ok(mut state) = KEYBOARD_STATE.lock() {
+        if let Some(keyboard) = state.as_mut() {
+            if let Some(event) = convert(_type, &cg_event, keyboard) {
+                if let Some(callback) = &mut GLOBAL_CALLBACK {
+                    if callback(event).is_none() {
+                        cg_event.set_type(CGEventType::Null);
+                    }
                 }
             }
         }
@@ -29,16 +30,28 @@ unsafe extern "C" fn raw_callback(
     cg_event
 }
 
-#[link(name = "Cocoa", kind = "framework")]
+static mut CUR_LOOP: CFRunLoopSourceRef = std::ptr::null_mut();
+
+#[inline]
+pub fn is_grabbed() -> bool {
+    unsafe {
+        !CUR_LOOP.is_null()
+    }
+}
+
 pub fn grab<T>(callback: T) -> Result<(), GrabError>
 where
     T: FnMut(Event) -> Option<Event> + 'static,
 {
+    if is_grabbed() {
+        return Ok(());
+    }
+
     unsafe {
         GLOBAL_CALLBACK = Some(Box::new(callback));
         let _pool = NSAutoreleasePool::new(nil);
         let tap = CGEventTapCreate(
-            CGEventTapLocation::HID, // HID, Session, AnnotatedSession,
+            CGEventTapLocation::Session, // HID, Session, AnnotatedSession,
             kCGHeadInsertEventTap,
             CGEventTapOption::Default,
             kCGEventMaskForAllEvents,
@@ -53,11 +66,21 @@ where
             return Err(GrabError::LoopSourceError);
         }
 
-        let current_loop = CFRunLoopGetCurrent();
-        CFRunLoopAddSource(current_loop, _loop, kCFRunLoopCommonModes);
+        CUR_LOOP = CFRunLoopGetCurrent() as _;
+        CFRunLoopAddSource(CUR_LOOP, _loop, kCFRunLoopCommonModes);
 
         CGEventTapEnable(tap, true);
         CFRunLoopRun();
+    }
+    Ok(())
+}
+
+pub fn exit_grab() -> Result<(), GrabError> {
+    unsafe {
+        if !CUR_LOOP.is_null() {
+            CFRunLoopStop(CUR_LOOP);
+            CUR_LOOP = std::ptr::null_mut();
+        }
     }
     Ok(())
 }

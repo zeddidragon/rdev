@@ -1,6 +1,6 @@
 use crate::linux::common::{FALSE, TRUE};
-use crate::linux::keycodes::code_from_key;
-use crate::rdev::{Button, EventType, SimulateError};
+use crate::keycodes::linux::code_from_key;
+use crate::rdev::{Button, EventType, RawKey, SimulateError};
 use std::convert::TryInto;
 use std::os::raw::c_int;
 use std::ptr::null;
@@ -9,14 +9,32 @@ use x11::xtest;
 
 unsafe fn send_native(event_type: &EventType, display: *mut xlib::Display) -> Option<()> {
     let res = match event_type {
-        EventType::KeyPress(key) => {
-            let code = code_from_key(*key)?;
-            xtest::XTestFakeKeyEvent(display, code, TRUE, 0)
-        }
-        EventType::KeyRelease(key) => {
-            let code = code_from_key(*key)?;
-            xtest::XTestFakeKeyEvent(display, code, FALSE, 0)
-        }
+        EventType::KeyPress(key) => match key {
+            crate::Key::RawKey(rawkey) => {
+                if let RawKey::LinuxXorgKeycode(keycode) = rawkey {
+                    xtest::XTestFakeKeyEvent(display, *keycode as _, TRUE, 0)
+                } else {
+                    return None;
+                }
+            }
+            _ => {
+                let code = code_from_key(*key)?;
+                xtest::XTestFakeKeyEvent(display, code, TRUE, 0)
+            }
+        },
+        EventType::KeyRelease(key) => match key {
+            crate::Key::RawKey(rawkey) => {
+                if let RawKey::LinuxXorgKeycode(keycode) = rawkey {
+                    xtest::XTestFakeKeyEvent(display, *keycode as _, FALSE, 0)
+                } else {
+                    return None;
+                }
+            }
+            _ => {
+                let code = code_from_key(*key)?;
+                xtest::XTestFakeKeyEvent(display, code, FALSE, 0)
+            }
+        },
         EventType::ButtonPress(button) => match button {
             Button::Left => xtest::XTestFakeButtonEvent(display, 1, TRUE, 0),
             Button::Middle => xtest::XTestFakeButtonEvent(display, 2, TRUE, 0),
@@ -84,4 +102,57 @@ pub fn simulate(event_type: &EventType) -> Result<(), SimulateError> {
             }
         }
     }
+}
+
+unsafe fn send_native_char(chr: char, pressed: bool, display: *mut xlib::Display) -> Option<()> {
+    // unuse keycode: F24 -> 194
+    let keycode: u32 = 194;
+
+    // char to keysym
+    let ordinal: u32 = chr.into();
+    let mut keysym = if ordinal < 0x100 {
+        ordinal
+    } else {
+        ordinal | 0x01000000
+    } as libc::c_ulong;
+
+    // remap keycode to keysym
+    x11::xlib::XChangeKeyboardMapping(display, keycode as _, 1, &mut keysym, 1);
+
+    let res = if pressed {
+        xtest::XTestFakeKeyEvent(display, keycode as _, TRUE, 0)
+    } else {
+        xtest::XTestFakeKeyEvent(display, keycode as _, FALSE, 0)
+    };
+
+    if res == 0 {
+        None
+    } else {
+        Some(())
+    }
+}
+
+pub fn simulate_char(chr: char, pressed: bool) -> Result<(), SimulateError> {
+    unsafe {
+        let dpy = xlib::XOpenDisplay(null());
+        if dpy.is_null() {
+            return Err(SimulateError);
+        }
+        match send_native_char(chr, pressed, dpy) {
+            Some(_) => {
+                xlib::XFlush(dpy);
+                xlib::XSync(dpy, 0);
+                xlib::XCloseDisplay(dpy);
+                Ok(())
+            }
+            None => {
+                xlib::XCloseDisplay(dpy);
+                Err(SimulateError)
+            }
+        }
+    }
+}
+
+pub fn simulate_unicode(_unicode: u16) -> Result<(), SimulateError> {
+    Err(SimulateError)
 }

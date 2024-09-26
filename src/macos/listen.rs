@@ -16,11 +16,12 @@ unsafe extern "C" fn raw_callback(
 ) -> CGEventRef {
     // println!("Event ref {:?}", cg_event_ptr);
     // let cg_event: CGEvent = transmute_copy::<*mut c_void, CGEvent>(&cg_event_ptr);
-    let opt = KEYBOARD_STATE.lock();
-    if let Ok(mut keyboard) = opt {
-        if let Some(event) = convert(_type, &cg_event, &mut keyboard) {
-            if let Some(callback) = &mut GLOBAL_CALLBACK {
-                callback(event);
+    if let Ok(mut state) = KEYBOARD_STATE.lock() {
+        if let Some(keyboard) = state.as_mut() {
+            if let Some(event) = convert(_type, &cg_event, keyboard) {
+                if let Some(callback) = &mut GLOBAL_CALLBACK {
+                    callback(event);
+                }
             }
         }
     }
@@ -29,11 +30,16 @@ unsafe extern "C" fn raw_callback(
     cg_event
 }
 
-#[link(name = "Cocoa", kind = "framework")]
 pub fn listen<T>(callback: T) -> Result<(), ListenError>
 where
     T: FnMut(Event) + 'static,
 {
+    let mut types = kCGEventMaskForAllEvents;
+    if crate::keyboard_only() {
+        types = (1 << CGEventType::KeyDown as u64)
+            + (1 << CGEventType::KeyUp as u64)
+            + (1 << CGEventType::FlagsChanged as u64);
+    }
     unsafe {
         GLOBAL_CALLBACK = Some(Box::new(callback));
         let _pool = NSAutoreleasePool::new(nil);
@@ -41,7 +47,7 @@ where
             CGEventTapLocation::HID, // HID, Session, AnnotatedSession,
             kCGHeadInsertEventTap,
             CGEventTapOption::ListenOnly,
-            kCGEventMaskForAllEvents,
+            types,
             raw_callback,
             nil,
         );
@@ -53,7 +59,7 @@ where
             return Err(ListenError::LoopSourceError);
         }
 
-        let current_loop = CFRunLoopGetCurrent();
+        let current_loop = CFRunLoopGetMain();
         CFRunLoopAddSource(current_loop, _loop, kCFRunLoopCommonModes);
 
         CGEventTapEnable(tap, true);

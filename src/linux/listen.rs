@@ -37,7 +37,11 @@ where
         // Prepare record range
         let mut record_range: xrecord::XRecordRange = *xrecord::XRecordAllocRange();
         record_range.device_events.first = xlib::KeyPress as c_uchar;
-        record_range.device_events.last = xlib::MotionNotify as c_uchar;
+        record_range.device_events.last = if crate::keyboard_only() {
+            xlib::KeyRelease
+        } else {
+            xlib::MotionNotify
+        } as c_uchar;
 
         // Create context
         let context = xrecord::XRecordCreateContext(
@@ -89,7 +93,10 @@ unsafe extern "C" fn record_callback(
     _null: *mut c_char,
     raw_data: *mut xrecord::XRecordInterceptData,
 ) {
-    let data = raw_data.as_ref().unwrap();
+    let Some(data) = raw_data.as_ref() else {
+        return;
+    };
+
     if data.category != xrecord::XRecordFromServer {
         return;
     }
@@ -97,10 +104,13 @@ unsafe extern "C" fn record_callback(
     debug_assert!(data.data_len * 4 >= std::mem::size_of::<XRecordDatum>().try_into().unwrap());
     // Cast binary data
     #[allow(clippy::cast_ptr_alignment)]
-    let xdatum = (data.data as *const XRecordDatum).as_ref().unwrap();
+    let Some(xdatum) = (data.data as *const XRecordDatum).as_ref() else {
+        return;
+    };
 
     let code: c_uint = xdatum.code.into();
     let type_: c_int = xdatum.type_.into();
+    // let state = xdatum.state;
 
     let x = xdatum.root_x as f64;
     let y = xdatum.root_y as f64;

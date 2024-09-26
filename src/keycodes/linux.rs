@@ -1,10 +1,9 @@
 use crate::rdev::Key;
-use std::os::raw::c_uint;
 
 macro_rules! decl_keycodes {
     ($($key:ident, $code:literal),*) => {
         //TODO: make const when rust lang issue #49146 is fixed
-        pub fn code_from_key(key: Key) -> Option<c_uint> {
+        pub fn code_from_key(key: Key) -> Option<u32> {
             match key {
                 $(
                     Key::$key => Some($code),
@@ -15,7 +14,8 @@ macro_rules! decl_keycodes {
         }
 
         //TODO: make const when rust lang issue #49146 is fixed
-        pub fn key_from_code(code: c_uint) -> Key {
+        #[allow(dead_code)]
+        pub fn key_from_code(code: u32) -> Key {
             match code {
                 $(
                     $code => Key::$key,
@@ -42,6 +42,18 @@ decl_keycodes!(
     F10, 76,
     F11, 95,
     F12, 96,
+    F13, 0xBF,
+    F14, 0xC0,
+    F15, 0xC1,
+    F16, 0xC2,
+    F17, 0xC3,
+    F18, 0xC4,
+    F19, 0xC5,
+    F20, 0xC6,
+    F21, 0xC7,
+    F22, 0xC8,
+    F23, 0xC9,
+    F24, 0xCA,
     F2, 68,
     F3, 69,
     F4, 70,
@@ -104,6 +116,9 @@ decl_keycodes!(
     Quote, 48,
     BackSlash, 51,
     IntlBackslash, 94,
+    IntlRo, 0x61,
+    IntlYen, 0x84,
+    KanaMode, 0x65,
     KeyZ, 52,
     KeyX, 53,
     KeyC, 54,
@@ -115,11 +130,14 @@ decl_keycodes!(
     Dot, 60,
     Slash, 61,
     Insert, 118,
+    KpDecimal, 91,
     KpReturn, 104,
     KpMinus, 82,
     KpPlus, 86,
     KpMultiply, 63,
     KpDivide, 106,
+    KpEqual, 0x7D,
+    KpComma, 0x81,
     Kp0, 90,
     Kp1, 87,
     Kp2, 88,
@@ -130,7 +148,16 @@ decl_keycodes!(
     Kp7, 79,
     Kp8, 80,
     Kp9, 81,
-    KpDelete, 91
+    MetaRight, 134,
+    Apps, 135,
+    VolumeUp, 0x007B,
+    VolumeDown, 0x007A,
+    VolumeMute, 0x0079,
+    Lang1, 0x0066,
+    Lang2, 0x0064,
+    Lang3, 0x0062,
+    Lang4, 0x0063,
+    Lang5, 0x005d
 );
 
 #[cfg(test)]

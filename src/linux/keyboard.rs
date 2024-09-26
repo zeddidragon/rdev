@@ -1,72 +1,43 @@
 extern crate x11;
-use crate::linux::keycodes::code_from_key;
-use crate::rdev::{EventType, Key, KeyboardState};
-use std::ffi::CString;
+use crate::keycodes::linux::code_from_key;
+use crate::rdev::{EventType, KeyboardState, UnicodeInfo};
+use std::convert::TryInto;
+use std::ffi::{CStr, CString};
 use std::os::raw::{c_char, c_int, c_uint, c_ulong, c_void};
 use std::ptr::{null, null_mut, NonNull};
-use x11::xlib;
+use x11::xlib::{self, KeySym, XKeyEvent, XKeysymToString, XSupportsLocale};
 
 #[derive(Debug)]
-struct State {
-    alt: bool,
-    ctrl: bool,
-    caps_lock: bool,
-    shift: bool,
-    meta: bool,
-}
+pub struct MyXIM(xlib::XIM);
+unsafe impl Sync for MyXIM {}
+unsafe impl Send for MyXIM {}
 
-// Inspired from https://github.com/wavexx/screenkey
-// But without remitting events to custom windows, instead we recreate  XKeyEvent
-// from xEvent data received via xrecord.
-// Other source of inspiration https://gist.github.com/baines/5a49f1334281b2685af5dcae81a6fa8a
-// Needed xproto crate as x11 does not implement _xevent.
-impl State {
-    fn new() -> State {
-        State {
-            alt: false,
-            ctrl: false,
-            caps_lock: false,
-            meta: false,
-            shift: false,
-        }
-    }
+#[derive(Debug)]
+pub struct MyXIC(xlib::XIC);
+unsafe impl Sync for MyXIC {}
+unsafe impl Send for MyXIC {}
 
-    fn value(&self) -> c_uint {
-        let mut res: c_uint = 0;
-        if self.alt {
-            res += xlib::Mod1Mask;
-        }
-        if self.ctrl {
-            res += xlib::ControlMask;
-        }
-        if self.caps_lock {
-            res += xlib::LockMask;
-        }
-        if self.meta {
-            res += xlib::Mod4Mask;
-        }
-        if self.shift {
-            res += xlib::ShiftMask;
-        }
-        res
-    }
-}
+#[derive(Debug)]
+pub struct MyDisplay(*mut xlib::Display);
+unsafe impl Sync for MyDisplay {}
+unsafe impl Send for MyDisplay {}
 
 #[derive(Debug)]
 pub struct Keyboard {
-    pub xim: Box<xlib::XIM>,
-    pub xic: Box<xlib::XIC>,
-    pub display: Box<*mut xlib::Display>,
+    pub xim: Box<MyXIM>,
+    pub xic: Box<MyXIC>,
+    pub display: Box<MyDisplay>,
     window: Box<xlib::Window>,
     keysym: Box<c_ulong>,
     status: Box<i32>,
-    state: State,
     serial: c_ulong,
 }
+
 impl Drop for Keyboard {
     fn drop(&mut self) {
         unsafe {
-            xlib::XCloseDisplay(*self.display);
+            let MyDisplay(display) = *self.display;
+            xlib::XCloseDisplay(display);
         }
     }
 }
@@ -74,15 +45,27 @@ impl Drop for Keyboard {
 impl Keyboard {
     pub fn new() -> Option<Keyboard> {
         unsafe {
-            // https://stackoverflow.com/questions/18246848/get-utf-8-input-with-x11-display#
-            let string = CString::new("@im=none").expect("Can't creat CString");
-            let ret = xlib::XSetLocaleModifiers(string.as_ptr());
-            NonNull::new(ret)?;
-
             let dpy = xlib::XOpenDisplay(null());
             if dpy.is_null() {
                 return None;
             }
+            // https://stackoverflow.com/questions/18246848/get-utf-8-input-with-x11-display#
+            // Try system localle first
+            let string = CString::new("").ok()?;
+            libc::setlocale(libc::LC_ALL, string.as_ptr());
+            // If not supported try C.UTF-8
+            if XSupportsLocale() == 0 {
+                let string = CString::new("C.UTF-8").ok()?;
+                libc::setlocale(libc::LC_ALL, string.as_ptr());
+            }
+            if XSupportsLocale() == 0 {
+                let string = CString::new("C").ok()?;
+                libc::setlocale(libc::LC_ALL, string.as_ptr());
+            }
+            let string = CString::new("@im=none").ok()?;
+            let ret = xlib::XSetLocaleModifiers(string.as_ptr());
+            NonNull::new(ret)?;
+
             let xim = xlib::XOpenIM(dpy, null_mut(), null_mut(), null_mut());
             NonNull::new(xim)?;
 
@@ -119,46 +102,78 @@ impl Keyboard {
                 &mut win_attr,
             );
 
-            let input_style = CString::new(xlib::XNInputStyle).expect("CString::new failed");
-            let window_client = CString::new(xlib::XNClientWindow).expect("CString::new failed");
+            let input_style = CString::new(xlib::XNInputStyle).ok()?;
+            let window_client = CString::new(xlib::XNClientWindow).ok()?;
             let style = xlib::XIMPreeditNothing | xlib::XIMStatusNothing;
 
             let xic = xlib::XCreateIC(
                 xim,
-                window_client.as_ptr(),
-                window,
                 input_style.as_ptr(),
                 style,
+                window_client.as_ptr(),
+                window,
                 null::<c_void>(),
             );
             NonNull::new(xic)?;
+
             xlib::XSetICFocus(xic);
+
             Some(Keyboard {
-                xim: Box::new(xim),
-                xic: Box::new(xic),
-                display: Box::new(dpy),
+                xim: Box::new(MyXIM(xim)),
+                xic: Box::new(MyXIC(xic)),
+                display: Box::new(MyDisplay(dpy)),
                 window: Box::new(window),
                 keysym: Box::new(0),
                 status: Box::new(0),
-                state: State::new(),
                 serial: 0,
             })
         }
     }
 
-    pub(crate) unsafe fn name_from_code(
+    pub(crate) unsafe fn get_current_modifiers(&mut self) -> Option<u32> {
+        let MyDisplay(display) = *self.display;
+        let screen_number = xlib::XDefaultScreen(display);
+        let screen = xlib::XScreenOfDisplay(display, screen_number);
+        let window = xlib::XRootWindowOfScreen(screen);
+        // Passing null pointers for the things we don't need results in a
+        // segfault.
+        let mut root_return: xlib::Window = 0;
+        let mut child_return: xlib::Window = 0;
+        let mut root_x_return = 0;
+        let mut root_y_return = 0;
+        let mut win_x_return = 0;
+        let mut win_y_return = 0;
+        let mut mask_return = 0;
+        xlib::XQueryPointer(
+            display,
+            window,
+            &mut root_return,
+            &mut child_return,
+            &mut root_x_return,
+            &mut root_y_return,
+            &mut win_x_return,
+            &mut win_y_return,
+            &mut mask_return,
+        );
+        Some(mask_return)
+    }
+
+    pub(crate) unsafe fn unicode_from_code(
         &mut self,
         keycode: c_uint,
         state: c_uint,
-    ) -> Option<String> {
-        if self.display.is_null() || self.xic.is_null() {
+    ) -> Option<UnicodeInfo> {
+        let MyDisplay(display) = *self.display;
+        let MyXIC(xic) = *self.xic;
+        if display.is_null() || xic.is_null() {
             println!("We don't seem to have a display or a xic");
             return None;
         }
         const BUF_LEN: usize = 4;
         let mut buf = [0_u8; BUF_LEN];
-        let key = xlib::XKeyEvent {
-            display: *self.display,
+        let MyDisplay(display) = *self.display;
+        let mut key = xlib::XKeyEvent {
+            display,
             root: 0,
             window: *self.window,
             subwindow: 0,
@@ -185,54 +200,101 @@ impl Keyboard {
         // -----------------------------------------------------------------
         xlib::XFilterEvent(&mut event, 0);
 
+        let MyXIC(xic) = *self.xic;
         let ret = xlib::Xutf8LookupString(
-            *self.xic,
+            xic,
             &mut event.key,
             buf.as_mut_ptr() as *mut c_char,
             BUF_LEN as c_int,
             &mut *self.keysym,
             &mut *self.status,
         );
+
+        let keysym = xlookup_string(&mut key);
+        self.keysym = Box::new(keysym);
+        if self.is_dead() {
+            return Some(UnicodeInfo {
+                name: None,
+                unicode: Vec::new(),
+                is_dead: true,
+            });
+        }
         if ret == xlib::NoSymbol {
             return None;
         }
 
         let len = buf.iter().position(|ch| ch == &0).unwrap_or(BUF_LEN);
-        String::from_utf8(buf[..len].to_vec()).ok()
+
+        // C0 controls
+        if len == 1 {
+            match String::from_utf8(buf[..len].to_vec()) {
+                Ok(s) => {
+                    if let Some(c) = s.chars().next() {
+                        if ('\u{1}'..='\u{1f}').contains(&c) {
+                            return None;
+                        }
+                    }
+                }
+                Err(_) => {}
+            }
+        }
+
+        Some(UnicodeInfo {
+            name: String::from_utf8(buf[..len].to_vec()).ok(),
+            unicode: Vec::new(),
+            is_dead: false,
+        })
+    }
+
+    pub fn is_dead(&mut self) -> bool {
+        let ptr = unsafe { XKeysymToString(*self.keysym) };
+        if ptr.is_null() {
+            false
+        } else {
+            let res = unsafe { CStr::from_ptr(ptr).to_str() };
+            res.unwrap_or_default().to_owned().starts_with("dead")
+        }
+    }
+
+    pub fn keysym(&self) -> u32 {
+        (*self.keysym).try_into().unwrap_or_default()
     }
 }
 
 impl KeyboardState for Keyboard {
-    fn add(&mut self, event_type: &EventType) -> Option<String> {
+    fn add(&mut self, event_type: &EventType) -> Option<UnicodeInfo> {
         match event_type {
-            EventType::KeyPress(key) => match key {
-                Key::ShiftLeft | Key::ShiftRight => {
-                    self.state.shift = true;
-                    None
-                }
-                Key::CapsLock => {
-                    self.state.caps_lock = !self.state.caps_lock;
-                    None
-                }
-                key => {
-                    let keycode = code_from_key(*key)?;
-                    let state = self.state.value();
-                    unsafe { self.name_from_code(keycode, state) }
-                }
-            },
-            EventType::KeyRelease(key) => match key {
-                Key::ShiftLeft | Key::ShiftRight => {
-                    self.state.shift = false;
-                    None
-                }
-                _ => None,
-            },
+            EventType::KeyPress(key) => {
+                let keycode = code_from_key(*key)?;
+                // let state = self.state.value();
+                let state = unsafe { self.get_current_modifiers().unwrap_or_default() };
+                // !!!: Igore Control
+                let state = state & 0xFFFB;
+                unsafe { self.unicode_from_code(keycode, state) }
+            }
+            EventType::KeyRelease(_key) => None,
             _ => None,
         }
     }
-    fn reset(&mut self) {
-        self.state = State::new();
-    }
+}
+
+/// refs:
+/// 1. https://github.com/mechpen/rterm/blob/b2d04defc13b5688bf75c5de72c0b8810f982dc1/src/x11_wrapper.rs#L357
+/// 2. https://github.com/freedesktop/xev/blob/a92082cb05bb3d6d3f0bebb951133774ca2dd412/xev.c#L125
+pub fn xlookup_string(event: &mut XKeyEvent) -> KeySym {
+    let mut buf = [0u8; 64];
+
+    let mut ksym: KeySym = 0;
+    let _len = unsafe {
+        xlib::XLookupString(
+            event,
+            buf.as_mut_ptr() as *mut _,
+            buf.len() as _,
+            &mut ksym,
+            null_mut(),
+        )
+    };
+    ksym
 }
 
 #[cfg(test)]
@@ -247,7 +309,11 @@ mod tests {
     /// XCB doc is sparse on the web let's say.
     fn test_thread_safety() {
         let mut keyboard = Keyboard::new().unwrap();
-        let char_s = keyboard.add(&EventType::KeyPress(Key::KeyS)).unwrap();
+        let char_s = keyboard
+            .add(&EventType::KeyPress(crate::rdev::Key::KeyS))
+            .unwrap()
+            .name
+            .unwrap();
         assert_eq!(
             char_s,
             "s".to_string(),
@@ -259,7 +325,11 @@ mod tests {
     #[ignore]
     fn test_thread_safety_2() {
         let mut keyboard = Keyboard::new().unwrap();
-        let char_s = keyboard.add(&EventType::KeyPress(Key::KeyS)).unwrap();
+        let char_s = keyboard
+            .add(&EventType::KeyPress(crate::rdev::Key::KeyS))
+            .unwrap()
+            .name
+            .unwrap();
         assert_eq!(
             char_s,
             "s".to_string(),

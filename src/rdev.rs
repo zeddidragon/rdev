@@ -41,12 +41,17 @@ pub enum ListenError {
 #[derive(Debug)]
 #[non_exhaustive]
 pub enum GrabError {
+    ListenError,
     /// MacOS
     EventTapError,
     /// MacOS
     LoopSourceError,
     /// Linux
     MissingDisplayError,
+    /// Linux
+    MissingScreenError,
+    // Linux
+    InvalidFileDescriptor,
     /// Linux
     KeyboardError,
     /// Windows
@@ -55,8 +60,18 @@ pub enum GrabError {
     MouseHookError(u32),
     /// All
     SimulateError,
+    /// All
+    ExitGrabError(String),
+
     IoError(std::io::Error),
 }
+
+// impl From<std::io::Error> for GrabError {
+//     fn from(err: std::io::Error) -> GrabError {
+//         GrabError::IoError(err)
+//     }
+// }
+
 /// Errors that occur when trying to get display size.
 #[non_exhaustive]
 #[derive(Debug)]
@@ -68,12 +83,6 @@ pub enum DisplayError {
 impl From<SimulateError> for GrabError {
     fn from(_: SimulateError) -> GrabError {
         GrabError::SimulateError
-    }
-}
-
-impl From<std::io::Error> for GrabError {
-    fn from(err: std::io::Error) -> GrabError {
-        GrabError::IoError(err)
     }
 }
 
@@ -89,6 +98,8 @@ impl Display for SimulateError {
 
 impl std::error::Error for SimulateError {}
 
+// Some keys from https://github.com/chromium/chromium/blob/main/ui/events/keycodes/dom/dom_code_data.inc
+
 /// Key names based on physical location on the device
 /// Merge Option(MacOS) and Alt(Windows, Linux) into Alt
 /// Merge Windows (Windows), Meta(Linux), Command(MacOS) into Meta
@@ -97,7 +108,8 @@ impl std::error::Error for SimulateError {}
 /// a different value too.
 /// Careful, on Windows KpReturn does not exist, it' s strictly equivalent to Return, also Keypad keys
 /// get modified if NumLock is Off and ARE pagedown and so on.
-#[derive(Debug, Copy, Clone, PartialEq)]
+use strum_macros::EnumIter; // 0.17.1
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, EnumIter)]
 #[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 pub enum Key {
     /// Alt key on Linux and Windows (option key on macOS)
@@ -115,6 +127,18 @@ pub enum Key {
     F10,
     F11,
     F12,
+    F13,
+    F14,
+    F15,
+    F16,
+    F17,
+    F18,
+    F19,
+    F20,
+    F21,
+    F22,
+    F23,
+    F24,
     F2,
     F3,
     F4,
@@ -180,6 +204,9 @@ pub enum Key {
     Quote,
     BackSlash,
     IntlBackslash,
+    IntlRo,   // Brazilian /? and Japanese _ 'ro'
+    IntlYen,  // Japanese Henkan (Convert) key.
+    KanaMode, // Japanese Hiragana/Katakana key.
     KeyZ,
     KeyX,
     KeyC,
@@ -196,6 +223,9 @@ pub enum Key {
     KpPlus,
     KpMultiply,
     KpDivide,
+    KpDecimal,
+    KpEqual,
+    KpComma,
     Kp0,
     Kp1,
     Kp2,
@@ -206,15 +236,59 @@ pub enum Key {
     Kp7,
     Kp8,
     Kp9,
-    KpDelete,
+    VolumeUp,
+    VolumeDown,
+    VolumeMute,
+    Lang1, // Korean Hangul/English toggle key, and as the Kana key on the Apple Japanese keyboard.
+    Lang2, // Korean Hanja conversion key, and as the Eisu key on the Apple Japanese keyboard.
+    Lang3, // Japanese Katakana key.
+    Lang4, // Japanese Hiragana key.
+    Lang5, // Japanese Zenkaku/Hankaku (Fullwidth/halfwidth) key.
     Function,
+    Apps,
+    Cancel,
+    Clear,
+    Kana,
+    Hangul,
+    Junja,
+    Final,
+    Hanja,
+    Hanji,
+    Print,
+    Select,
+    Execute,
+    Help,
+    Sleep,
+    Separator,
     Unknown(u32),
+    RawKey(RawKey),
+}
+
+#[cfg(not(target_os = "macos"))]
+pub type KeyCode = u32;
+#[cfg(target_os = "macos")]
+pub type KeyCode = crate::CGKeyCode;
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, EnumIter)]
+#[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
+pub enum RawKey {
+    ScanCode(KeyCode),
+    WinVirtualKeycode(KeyCode),
+    LinuxXorgKeycode(KeyCode),
+    LinuxConsoleKeycode(KeyCode),
+    MacVirtualKeycode(KeyCode),
+}
+
+impl Default for RawKey {
+    fn default() -> Self {
+        Self::ScanCode(0)
+    }
 }
 
 /// Standard mouse buttons
 /// Some mice have more than 3 buttons. These are not defined, and different
 /// OSs will give different `Button::Unknown` values.
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 pub enum Button {
     Left,
@@ -252,6 +326,14 @@ pub enum EventType {
     },
 }
 
+/// The Unicode information of input.
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct UnicodeInfo {
+    pub name: Option<String>,
+    pub unicode: Vec<u16>,
+    pub is_dead: bool,
+}
+
 /// When events arrive from the OS they get some additional information added from
 /// EventType, which is the time when this event was received, and the name Option
 /// which contains what characters should be emmitted from that event. This relies
@@ -262,8 +344,16 @@ pub enum EventType {
 #[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 pub struct Event {
     pub time: SystemTime,
-    pub name: Option<String>,
+    pub unicode: Option<UnicodeInfo>,
     pub event_type: EventType,
+    // Linux: keysym
+    // WIndows: vkcod
+    pub platform_code: u32,
+    pub position_code: u32,
+    #[cfg(target_os = "windows")]
+    pub extra_data: winapi::shared::basetsd::ULONG_PTR,
+    #[cfg(target_os = "macos")]
+    pub extra_data: i64,
 }
 
 /// We can define a dummy Keyboard, that we will use to detect
@@ -279,15 +369,15 @@ pub struct Event {
 /// use rdev::{Keyboard, EventType, Key, KeyboardState};
 ///
 /// let mut keyboard = Keyboard::new().unwrap();
-/// let string = keyboard.add(&EventType::KeyPress(Key::KeyS));
+/// let string = keyboard.add(&EventType::KeyPress(Key::KeyS)).unwrap().name.unwrap();
 /// // string == Some("s")
 /// ```
 pub trait KeyboardState {
     /// Changes the keyboard state as if this event happened. we don't
     /// really hit the OS here, which might come handy to test what should happen
     /// if we were to hit said key.
-    fn add(&mut self, event_type: &EventType) -> Option<String>;
+    fn add(&mut self, event_type: &EventType) -> Option<UnicodeInfo>;
 
-    /// Resets the keyboard state as if we never touched it (no shift, caps_lock and so on)
-    fn reset(&mut self);
+    // Resets the keyboard state as if we never touched it (no shift, caps_lock and so on)
+    // fn reset(&mut self);
 }

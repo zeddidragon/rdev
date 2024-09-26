@@ -1,5 +1,5 @@
 use crate::linux::keyboard::Keyboard;
-use crate::linux::keycodes::key_from_code;
+use crate::keycodes::linux::key_from_code;
 use crate::rdev::{Button, Event, EventType, KeyboardState};
 use std::convert::TryInto;
 use std::os::raw::{c_int, c_uchar, c_uint};
@@ -37,7 +37,7 @@ pub fn convert_event(code: c_uchar, type_: c_int, x: f64, y: f64) -> Option<Even
                 delta_y: -1,
                 delta_x: 0,
             }),
-            #[allow(clippy::identity_conversion)]
+            #[allow(clippy::useless_conversion)]
             code => Some(EventType::ButtonPress(Button::Unknown(code))),
         },
         xlib::ButtonRelease => match code {
@@ -45,7 +45,7 @@ pub fn convert_event(code: c_uchar, type_: c_int, x: f64, y: f64) -> Option<Even
             2 => Some(EventType::ButtonRelease(Button::Middle)),
             3 => Some(EventType::ButtonRelease(Button::Right)),
             4 | 5 => None,
-            #[allow(clippy::identity_conversion)]
+            #[allow(clippy::useless_conversion)]
             _ => Some(EventType::ButtonRelease(Button::Unknown(code))),
         },
         xlib::MotionNotify => Some(EventType::MouseMove { x, y }),
@@ -62,11 +62,13 @@ pub fn convert(
 ) -> Option<Event> {
     let event_type = convert_event(code as c_uchar, type_, x, y)?;
     let kb: &mut Keyboard = (*keyboard).as_mut()?;
-    let name = kb.add(&event_type);
+    let unicode = kb.add(&event_type);
     Some(Event {
         event_type,
         time: SystemTime::now(),
-        name,
+        unicode,
+        platform_code: code as _,
+        position_code: code as _,
     })
 }
 
@@ -99,7 +101,7 @@ impl Display {
         }
     }
 
-    #[cfg(feature = "unstable_grab")]
+    #[allow(dead_code)]
     pub fn get_mouse_pos(&self) -> Option<(u64, u64)> {
         unsafe {
             let root_window = xlib::XRootWindow(self.display, 0);
